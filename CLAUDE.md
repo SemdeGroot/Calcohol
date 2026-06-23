@@ -1,8 +1,8 @@
-# Calcohol Agent Guide
+# AlcoTox Agent Guide
 
 ## Project
 
-Calcohol is an Expo React Native app for a local ethanol antidote calculator based on the spreadsheet and article in `context/`.
+AlcoTox is an Expo React Native app for a local ethanol antidote calculator based on the spreadsheet and article in `context/`.
 
 The current repository contains scaffold only. Do not add clinical calculator behavior unless the user explicitly asks for the implementation step.
 

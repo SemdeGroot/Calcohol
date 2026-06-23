@@ -8,7 +8,7 @@ export default function Root({ children }: PropsWithChildren) {
     <html lang="nl">
       <head>
         <meta charSet="utf-8" />
-        <title>cAlcohol</title>
+        <title>AlcoTox</title>
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta
           name="viewport"

@@ -10,7 +10,7 @@ Hospital pharmacists, clinical toxicology staff, emergency clinicians, and inten
 
 ## Product Purpose
 
-cAlcohol provides a clear local calculation aid for ethanol dosing, based on the provided spreadsheet and source article. It supports calculation and source transparency without replacing local protocols or clinical judgment.
+AlcoTox provides a clear local calculation aid for ethanol dosing, based on the provided spreadsheet and source article. It supports calculation and source transparency without replacing local protocols or clinical judgment.
 
 ## Brand Personality
 

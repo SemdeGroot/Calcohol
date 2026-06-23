@@ -22,7 +22,7 @@ function RootStack() {
       <Stack
         screenOptions={{
           headerShown: false,
-          title: "cAlcohol",
+          title: "AlcoTox",
           contentStyle: { backgroundColor: theme.bg },
         }}
       />

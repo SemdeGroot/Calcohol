@@ -84,7 +84,7 @@ export function CalculatorScreen() {
               </View>
               <View style={{ flex: 1, gap: theme.space.xs }}>
                 <AppText variant="titleXl" weight="bold">
-                  cAlcohol
+                  AlcoTox
                 </AppText>
                 <AppText variant="caption" color="muted">
                   Ethanol doseringshulp
@@ -152,7 +152,7 @@ export function CalculatorScreen() {
                   {dialysis ? (
                     <InlineNotice
                       icon={Activity}
-                      text={`Tijdens dialyse telt cAlcohol ${CALCULATOR_CONSTANTS.dialysisClearanceMgKgHour} mg/kg/uur extra klaring bij Vmax op.`}
+                      text={`Tijdens dialyse telt AlcoTox ${CALCULATOR_CONSTANTS.dialysisClearanceMgKgHour} mg/kg/uur extra klaring bij Vmax op.`}
                     />
                   ) : null}
                 </View>
@@ -508,7 +508,7 @@ function FormulaPanel({
 
         {currentEthanolMgPerL !== null && currentEthanolMgPerL >= CALCULATOR_CONSTANTS.targetEthanolMgPerL ? (
           <AppText variant="bodySm" color="textSub">
-            Boven de streefconcentratie is doseren niet nodig. cAlcohol toont dan geen oplaad- en geen
+            Boven de streefconcentratie is doseren niet nodig. AlcoTox toont dan geen oplaad- en geen
             onderhoudsdosering.
           </AppText>
         ) : null}
@@ -576,13 +576,13 @@ function SourceModal({ open, onClose }: { open: boolean; onClose: () => void }) 
         </AppText>
         <AppText variant="bodySm" color="textSub">
           Bij ernstige intoxicaties kan dialyse nodig zijn. Het artikel beschrijft dat dialyse de klaring verhoogt.
-          cAlcohol rekent daarom een aparte onderhoudsdosering tijdens dialyse uit.
+          AlcoTox rekent daarom een aparte onderhoudsdosering tijdens dialyse uit.
         </AppText>
       </SourceSection>
 
       <SourceSection title="Wanneer gebruiken">
         <AppText variant="bodySm" color="textSub">
-          cAlcohol kan worden gebruikt wanneer een ethanolspiegel bekend is en je een ethanoldosering wilt omrekenen naar een
+          AlcoTox kan worden gebruikt wanneer een ethanolspiegel bekend is en je een ethanoldosering wilt omrekenen naar een
           infuusvolume. De app rekent de oplaaddosis, de onderhoudsdosering en de onderhoudsdosering tijdens dialyse uit.
         </AppText>
         <AppText variant="bodySm" color="textSub">
@@ -595,11 +595,11 @@ function SourceModal({ open, onClose }: { open: boolean; onClose: () => void }) 
         <AppText variant="bodySm" color="textSub">
           Het artikel noemt een nagestreefde ethanolconcentratie van 1000 mg/L. De oplaaddosis vult alleen het verschil
           aan tussen de gemeten ethanolconcentratie en deze streefwaarde. Ligt de gemeten waarde al op of boven 1000 mg/L,
-          dan toont cAlcohol geen oplaaddosis.
+          dan toont AlcoTox geen oplaaddosis.
         </AppText>
         <AppText variant="bodySm" color="textSub">
-          De onderhoudsdosering gebruikt gewicht, Vmax en Km. Voor chronisch alcoholgebruik rekent cAlcohol met een hogere
-          Vmax dan voor niet-drinkers. Bij dialyse telt cAlcohol extra klaring op.
+          De onderhoudsdosering gebruikt gewicht, Vmax en Km. Voor chronisch alcoholgebruik rekent AlcoTox met een hogere
+          Vmax dan voor niet-drinkers. Bij dialyse telt AlcoTox extra klaring op.
         </AppText>
       </SourceSection>
 
@@ -615,7 +615,7 @@ function SourceModal({ open, onClose }: { open: boolean; onClose: () => void }) 
 
       <View style={{ borderRadius: theme.radius.md, backgroundColor: theme.panelSoft, padding: theme.space.md }}>
         <AppText variant="caption" color="textSub">
-          Deze tekst verklaart de berekening. cAlcohol is geen behandelprotocol.
+          Deze tekst verklaart de berekening. AlcoTox is geen behandelprotocol.
         </AppText>
       </View>
     </AppModal>
@@ -675,7 +675,7 @@ function Footer() {
       }}
     >
       <AppText variant="caption" color="textSub">
-        cAlcohol is een berekeningshulpmiddel, geen behandelprotocol.
+        AlcoTox is een berekeningshulpmiddel, geen behandelprotocol.
       </AppText>
     </View>
   );

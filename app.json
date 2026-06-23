@@ -1,19 +1,19 @@
 {
   "expo": {
-    "name": "cAlcohol",
-    "slug": "calcohol",
-    "scheme": "calcohol",
+    "name": "AlcoTox",
+    "slug": "alcotox",
+    "scheme": "alcotox",
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "icon": "./assets/icon.png",
     "platforms": ["ios", "android", "web"],
     "ios": {
-      "bundleIdentifier": "nl.calcohol.app",
+      "bundleIdentifier": "nl.alcotox.app",
       "supportsTablet": true
     },
     "android": {
-      "package": "nl.calcohol.app",
+      "package": "nl.alcotox.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#2F6F73"
