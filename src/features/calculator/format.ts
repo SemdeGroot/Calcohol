@@ -1,5 +1,5 @@
 const numberFormatter = new Intl.NumberFormat("nl-NL", {
-  maximumFractionDigits: 1,
+  maximumFractionDigits: 0,
   minimumFractionDigits: 0,
 });
 

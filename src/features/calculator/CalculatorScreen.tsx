@@ -49,6 +49,7 @@ export function CalculatorScreen() {
         dialysis,
       })
     : null;
+  const aboveTarget = result !== null && result.loadingDose.mg === 0;
 
   return (
     <Screen>
@@ -59,7 +60,7 @@ export function CalculatorScreen() {
             paddingHorizontal: twoColumn ? theme.space["2xl"] : theme.space.lg,
             paddingTop: twoColumn ? theme.space["2xl"] : theme.space.lg,
             paddingBottom: theme.space["3xl"],
-            gap: theme.space.xl,
+            gap: theme.space.lg,
           }}
         >
           <View
@@ -99,7 +100,7 @@ export function CalculatorScreen() {
             style={{
               flexDirection: twoColumn ? "row" : "column",
               alignItems: "stretch",
-              gap: theme.space.xl,
+              gap: theme.space.lg,
             }}
           >
             <Panel style={{ flex: twoColumn ? 0.95 : undefined }}>
@@ -182,32 +183,31 @@ export function CalculatorScreen() {
                     <>
                       <ResultRow
                         title="Oplaaddosis"
-                        primary={
-                          result.loadingDose.mg === 0
-                            ? "Geen oplaaddosis nodig"
-                            : formatMg(result.loadingDose.mg)
-                        }
+                        primary={aboveTarget ? "Geen oplaaddosis nodig" : formatMg(result.loadingDose.mg)}
                         secondary={
-                          result.loadingDose.mg === 0
+                          aboveTarget
                             ? `Gemeten ethanol is op of boven ${CALCULATOR_CONSTANTS.targetEthanolMgPerL} mg/L.`
                             : formatMl(result.loadingDose.ml)
                         }
                       />
-                      <ResultRow
-                        title={dialysis ? "Onderhoud tijdens dialyse" : "Onderhoudsdosering"}
-                        primary={formatMgPerHour(result.selectedMaintenanceDose.mgPerHour)}
-                        secondary={formatMlPerHour(result.selectedMaintenanceDose.mlPerHour)}
-                        emphasized
-                      />
-                      {dialysis ? (
+                      {aboveTarget ? (
                         <ResultRow
-                          title="Onderhoud zonder dialyse"
-                          primary={formatMgPerHour(result.maintenanceDose.mgPerHour)}
-                          secondary={formatMlPerHour(result.maintenanceDose.mlPerHour)}
+                          title={dialysis ? "Onderhoud tijdens dialyse" : "Onderhoudsdosering"}
+                          primary="Geen onderhoudsdosering nodig"
+                          secondary={`Gemeten ethanol is op of boven ${CALCULATOR_CONSTANTS.targetEthanolMgPerL} mg/L.`}
                           divider={false}
                         />
-                      ) : null}
-                      <InfusionBasis profileLabel={DRINKER_PROFILES[drinkerStatus].label} />
+                      ) : (
+                        <>
+                          <ResultRow
+                            title={dialysis ? "Onderhoud tijdens dialyse" : "Onderhoudsdosering"}
+                            primary={formatMgPerHour(result.selectedMaintenanceDose.mgPerHour)}
+                            secondary={formatMlPerHour(result.selectedMaintenanceDose.mlPerHour)}
+                            emphasized
+                          />
+                          <InfusionBasis />
+                        </>
+                      )}
                     </>
                   ) : (
                     <EmptyResult />
@@ -408,22 +408,14 @@ function ResultRow({
   );
 }
 
-function InfusionBasis({ profileLabel }: { profileLabel: string }) {
+function InfusionBasis() {
   const theme = useTheme();
 
   return (
-    <View
-      style={{
-        gap: theme.space.xs,
-        paddingTop: theme.space.sm,
-      }}
-    >
+    <View style={{ paddingTop: theme.space.sm }}>
       <AppText variant="caption" color="textSub">
-        Alle ml-waarden gelden voor het ethanol/glucose-infuus: {formatMg(CALCULATOR_CONSTANTS.ethanolStockMg)} ethanol
-        in {formatMl(CALCULATOR_CONSTANTS.infusionVolumeMl)} totaalvolume, bereid uit 50 ml ethanol 96% v/v.
-      </AppText>
-      <AppText variant="caption" color="textSub">
-        Profiel: {profileLabel}. Streefconcentratie: {CALCULATOR_CONSTANTS.targetEthanolMgPerL} mg/L.
+        Infuusbasis: {formatMg(CALCULATOR_CONSTANTS.ethanolStockMg)} ethanol in{" "}
+        {formatMl(CALCULATOR_CONSTANTS.infusionVolumeMl)} totaalvolume, bereid uit 50 ml ethanol 96% v/v.
       </AppText>
     </View>
   );
@@ -516,7 +508,8 @@ function FormulaPanel({
 
         {currentEthanolMgPerL !== null && currentEthanolMgPerL >= CALCULATOR_CONSTANTS.targetEthanolMgPerL ? (
           <AppText variant="bodySm" color="textSub">
-            Boven de streefconcentratie is aanvullen niet nodig. cAlcohol toont dit als geen oplaaddosis nodig.
+            Boven de streefconcentratie is doseren niet nodig. cAlcohol toont dan geen oplaad- en geen
+            onderhoudsdosering.
           </AppText>
         ) : null}
       </View>
@@ -615,7 +608,7 @@ function SourceModal({ open, onClose }: { open: boolean; onClose: () => void }) 
           De bron noemt controle van de ethanolspiegel 4 tot 6 uur na de oplaaddosis.
         </AppText>
         <AppText variant="bodySm" color="textSub">
-          Houd rekening met ethanolafbraak tussen prikmoment en uitslag. Als de uitslag later beschikbaar komt, kan de
+          Houd rekening met ethanolafbraak tussen bloedafname en analyseresultaat. Als de uitslag later beschikbaar komt, kan de
           actuele ethanolconcentratie lager zijn dan de gemeten waarde.
         </AppText>
       </SourceSection>
@@ -682,7 +675,7 @@ function Footer() {
       }}
     >
       <AppText variant="caption" color="textSub">
-        cAlcohol is een berekeningshulpmiddel, geen behandelprotocol. Volg lokaal protocol en klinisch oordeel.
+        cAlcohol is een berekeningshulpmiddel, geen behandelprotocol.
       </AppText>
     </View>
   );
