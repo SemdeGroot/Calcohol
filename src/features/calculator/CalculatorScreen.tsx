@@ -414,8 +414,8 @@ function InfusionBasis() {
   return (
     <View style={{ paddingTop: theme.space.sm }}>
       <AppText variant="caption" color="textSub">
-        Infuusbasis: {formatMg(CALCULATOR_CONSTANTS.ethanolStockMg)} ethanol in{" "}
-        {formatMl(CALCULATOR_CONSTANTS.infusionVolumeMl)} totaalvolume, bereid uit 50 ml ethanol 96% v/v.
+        Bereiding ethanolinfuus: 50 ml ethanol 96% v/v
+        toevoegen aan 250 ml glucose 5%.
       </AppText>
     </View>
   );
@@ -582,7 +582,7 @@ function SourceModal({ open, onClose }: { open: boolean; onClose: () => void }) 
 
       <SourceSection title="Wanneer gebruiken">
         <AppText variant="bodySm" color="textSub">
-          Gebruik cAlcohol wanneer een ethanolspiegel bekend is en je een ethanoldosering wilt omrekenen naar een
+          cAlcohol kan worden gebruikt wanneer een ethanolspiegel bekend is en je een ethanoldosering wilt omrekenen naar een
           infuusvolume. De app rekent de oplaaddosis, de onderhoudsdosering en de onderhoudsdosering tijdens dialyse uit.
         </AppText>
         <AppText variant="bodySm" color="textSub">
