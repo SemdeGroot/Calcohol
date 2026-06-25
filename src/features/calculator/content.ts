@@ -15,40 +15,35 @@ export const SOURCE_SECTIONS: SourceSection[] = [
   {
     title: "Introductie",
     paragraphs: [
-      "Het artikel beschrijft intoxicaties met methanol en ethyleenglycol vanuit de klinische toxicologie. De schade ontstaat vooral door metabolieten die via alcoholdehydrogenase worden gevormd. Daarom richt de behandeling in het artikel zich op het remmen van die omzetting en op het verwijderen van de toxische stoffen wanneer dat nodig is.",
+      "Methanol en ethyleenglycol veroorzaken schade vooral door metabolieten die via alcoholdehydrogenase ontstaan. De behandeling richt zich op het remmen van die omzetting en, indien nodig, op het verwijderen van de toxische stoffen.",
     ],
-  },
-  {
-    title: "Referentie",
-    paragraphs: [REFERENCE],
   },
   {
     title: "Waarom ethanol",
     paragraphs: [
-      "Ethanol concurreert met methanol en ethyleenglycol om alcoholdehydrogenase. Bij voldoende ethanol wordt minder methanol of ethyleenglycol omgezet naar toxische metabolieten. Het artikel noemt dit als de reden om ethanol als antidotum te gebruiken.",
-      "Bij ernstige intoxicaties kan dialyse nodig zijn. Het artikel beschrijft dat dialyse de klaring verhoogt. AlcoTox rekent daarom een aparte onderhoudsdosering tijdens dialyse uit.",
+      "Ethanol concurreert met methanol en ethyleenglycol om alcoholdehydrogenase. Bij voldoende ethanol worden minder toxische metabolieten gevormd. Daarom wordt ethanol als antidotum gebruikt.",
+      "Bij ernstige intoxicaties kan dialyse nodig zijn; dialyse verhoogt de klaring. AlcoTox berekent daarom een aparte onderhoudsdosering tijdens dialyse.",
     ],
   },
   {
     title: "Wanneer gebruiken",
     paragraphs: [
-      "AlcoTox kan worden gebruikt wanneer een ethanolspiegel bekend is en je een ethanoldosering wilt omrekenen naar een infuusvolume. De app rekent de oplaaddosis, de onderhoudsdosering en de onderhoudsdosering tijdens dialyse uit.",
-      "De app bepaalt niet of ethanol of dialyse nodig is. Die beslissing blijft onderdeel van het lokale protocol en het klinisch oordeel.",
+      "Gebruik AlcoTox wanneer een ethanolspiegel bekend is en je een dosering wilt omrekenen naar een infuusvolume. De app berekent de oplaaddosis en de onderhoudsdosering, ook tijdens dialyse.",
+      "De app bepaalt niet of ethanol of dialyse nodig is. Die beslissing blijft bij het lokale protocol en het klinisch oordeel.",
     ],
   },
   {
     title: "Rekenmethode",
     paragraphs: [
-      "Het artikel noemt een nagestreefde ethanolconcentratie van 1000 mg/L. De oplaaddosis vult alleen het verschil aan tussen de gemeten ethanolconcentratie en de gekozen streefwaarde. Ligt de gemeten waarde al op of boven de gekozen streefwaarde, dan toont AlcoTox geen oplaaddosis.",
-      "De onderhoudsdosering gebruikt gewicht, Vmax en Km. Voor chronisch alcoholgebruik rekent AlcoTox met een hogere Vmax dan voor niet-drinkers. Bij dialyse telt AlcoTox extra klaring op.",
-      "De infuusconcentratie wordt gebruikt voor de omrekening van mg ethanol naar ml infuusvolume. De standaardwaarde komt overeen met de spreadsheetbereiding, maar kan worden aangepast aan het lokale handboek.",
+      "De streefconcentratie is 1000 mg/L. De oplaaddosis vult alleen het verschil aan tussen de gemeten en de gekozen streefwaarde. Ligt de gemeten waarde daar al op of boven, dan toont AlcoTox geen oplaaddosis.",
+      "De onderhoudsdosering gebruikt gewicht, Vmax en Km. Bij chronisch alcoholgebruik geldt een hogere Vmax; bij dialyse telt extra klaring mee. De infuusconcentratie bepaalt de omrekening van mg ethanol naar ml.",
     ],
   },
   {
     title: "Aandachtspunten",
     paragraphs: [
-      "De bron noemt controle van de ethanolspiegel 4 tot 6 uur na de oplaaddosis.",
-      "Houd rekening met ethanolafbraak tussen bloedafname en analyseresultaat. Als de uitslag later beschikbaar komt, kan de actuele ethanolconcentratie lager zijn dan de gemeten waarde.",
+      "Controleer de ethanolspiegel 4 tot 6 uur na de oplaaddosis.",
+      "Houd rekening met ethanolafbraak tussen bloedafname en uitslag: de actuele concentratie kan lager zijn dan de gemeten waarde.",
     ],
   },
 ];

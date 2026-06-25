@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import {
   Activity,
   BookOpen,
@@ -51,8 +52,8 @@ const DEFAULT_INFUSION = formatOneDecimal(
 );
 
 export function CalculatorScreen() {
-  const [weightKg, setWeightKg] = React.useState("");
-  const [currentEthanolMgPerL, setCurrentEthanolMgPerL] = React.useState("");
+  const [weightKg, setWeightKg] = React.useState("70");
+  const [currentEthanolMgPerL, setCurrentEthanolMgPerL] = React.useState("800");
   const [drinkerStatus, setDrinkerStatus] =
     React.useState<DrinkerStatus>("nonDrinker");
   const [dialysis, setDialysis] = React.useState(false);
@@ -60,7 +61,7 @@ export function CalculatorScreen() {
   const [customTargetEthanolMgPerL, setCustomTargetEthanolMgPerL] =
     React.useState("");
   const [volumeOfDistributionProfile, setVolumeOfDistributionProfile] =
-    React.useState<VolumeOfDistributionProfileId>("female");
+    React.useState<VolumeOfDistributionProfileId>("male");
   const [infusionConcentrationGPerL, setInfusionConcentrationGPerL] =
     React.useState(DEFAULT_INFUSION);
   const [sourceOpen, setSourceOpen] = React.useState(false);
@@ -102,7 +103,7 @@ export function CalculatorScreen() {
       dialysis ||
       targetMode !== "1000" ||
       customTargetEthanolMgPerL.trim() ||
-      volumeOfDistributionProfile !== "female" ||
+      volumeOfDistributionProfile !== "male" ||
       infusionConcentrationGPerL !== DEFAULT_INFUSION,
   );
   const result =
@@ -124,7 +125,7 @@ export function CalculatorScreen() {
     setDialysis(false);
     setTargetMode("1000");
     setCustomTargetEthanolMgPerL("");
-    setVolumeOfDistributionProfile("female");
+    setVolumeOfDistributionProfile("male");
     setInfusionConcentrationGPerL(DEFAULT_INFUSION);
   };
 
@@ -418,8 +419,7 @@ function DoseSettings({
           Doseerinstellingen
         </h2>
         <p className="text-caption text-muted-foreground">
-          Spreadsheetwaarden staan standaard aan. Pas alleen aan volgens lokaal
-          protocol of handboek.
+          Standaardwaarden staan aan. Pas alleen aan volgens lokaal protocol.
         </p>
       </div>
 
@@ -447,7 +447,7 @@ function DoseSettings({
 
       <InlineNotice
         icon={Info}
-        text="1000 mg/L is de bronwaarde uit het artikel en de spreadsheet. Het is de streefconcentratie waarbij het overgrote deel (circa 90%) van de methanoloxidatie is geremd. Lokale protocollen kunnen een hogere streefwaarde gebruiken."
+        text="Bij 1000 mg/L is circa 90% van de methanoloxidatie geremd. Lokale protocollen kunnen hoger zijn."
       />
 
       <SegmentedControl
@@ -467,7 +467,7 @@ function DoseSettings({
         value={infusionConcentrationGPerL}
         onChange={onInfusionConcentrationChange}
         error={infusionError}
-        helper="Neem de lokale handboekwaarde over. Spreadsheetdefault is 50 ml ethanol 96% v/v in 300 ml totaal."
+        helper="Standaard 50 ml ethanol 96% v/v in 300 ml totaal."
       />
     </div>
   );
@@ -580,8 +580,7 @@ function InfusionBasis({ settings }: { settings: CalculatorSettings }) {
   return (
     <p className="pt-2 text-caption text-muted-foreground">
       Omrekening naar infuusvolume gebruikt{" "}
-      {formatGPerL(settings.infusionConcentrationGPerL)}. Neem de lokale
-      handboekwaarde over als die afwijkt.
+      {formatGPerL(settings.infusionConcentrationGPerL)}.
     </p>
   );
 }
@@ -748,6 +747,13 @@ function SourceModal({
               behandelprotocol.
             </p>
           </div>
+
+          <div className="flex flex-col gap-2 border-t border-border pt-4">
+            <h3 className="text-body-sm font-semibold text-foreground">
+              Referentie
+            </h3>
+            <p className="text-caption text-muted-foreground">{REFERENCE}</p>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
@@ -757,13 +763,42 @@ function SourceModal({
 function Footer() {
   return (
     <footer
-      className="reveal flex flex-col gap-1 pt-2"
+      className="reveal mt-2 flex flex-col gap-5 border-t border-border pt-6"
       style={{ animationDelay: "340ms" }}
     >
-      <p className="text-caption text-muted-foreground">
-        AlcoTox is een berekeningshulpmiddel, geen behandelprotocol.
-      </p>
-      <p className="text-caption text-muted-foreground">Bron: {REFERENCE}</p>
+      <div className="flex flex-col gap-4 min-[560px]:flex-row min-[560px]:items-center min-[560px]:justify-between">
+        <div className="flex items-center gap-2">
+          <span className="flex size-7 items-center justify-center rounded-md bg-primary-soft">
+            <Calculator className="size-4 text-primary-dark" strokeWidth={1.75} />
+          </span>
+          <span className="text-body-sm font-semibold text-foreground">
+            AlcoTox
+          </span>
+        </div>
+        <nav className="flex flex-wrap gap-x-5 gap-y-1.5">
+          {[
+            { href: "/validatie/", label: "Validatie" },
+            { href: "/voorwaarden/", label: "Voorwaarden" },
+            { href: "/privacy/", label: "Privacy" },
+            { href: "/cookies/", label: "Cookies" },
+          ].map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="text-body-sm text-muted-foreground underline-offset-4 transition-colors hover:text-primary-dark hover:underline"
+            >
+              {link.label}
+            </Link>
+          ))}
+        </nav>
+      </div>
+
+      <div className="flex flex-col gap-1 border-t border-border pt-4">
+        <p className="text-caption text-muted-foreground">
+          AlcoTox is een berekeningshulpmiddel, geen behandelprotocol.
+        </p>
+        <p className="text-caption text-muted-foreground">Bron: {REFERENCE}</p>
+      </div>
     </footer>
   );
 }

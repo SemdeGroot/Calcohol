@@ -9,3 +9,6 @@ export const SITE_TITLE =
 
 export const SITE_DESCRIPTION =
   "AlcoTox berekent de oplaaddosis en onderhoudsdosering ethanol als antidotum bij methanol- of ethyleenglycolintoxicatie en zet de dosis om naar infuusvolume.";
+
+// Shown as "Laatst bijgewerkt" on the legal pages.
+export const LEGAL_LAST_UPDATED = "juni 2026";
