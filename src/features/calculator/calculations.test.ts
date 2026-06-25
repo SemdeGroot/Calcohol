@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   CalculatorInputError,
   calculateEthanolDosing,
+  calculateEthanol96Infusion,
   calculateLoadingDoseMg,
   calculateMaintenanceDoseMgPerHour,
   convertMgToInfusionMl,
@@ -18,11 +19,11 @@ describe("ethanol dosing calculations", () => {
     });
 
     expect(result.loadingDose.mg).toBeCloseTo(7800, 10);
-    expect(result.loadingDose.ml).toBeCloseTo(78, 10);
+    expect(result.loadingDose.ml).toBeCloseTo(61.5789473684211, 10);
     expect(result.maintenanceDose.mgPerHour).toBeCloseTo(4283.83128295255, 10);
-    expect(result.maintenanceDose.mlPerHour).toBeCloseTo(42.8383128295255, 10);
+    expect(result.maintenanceDose.mlPerHour).toBeCloseTo(33.8197206548885, 10);
     expect(result.dialysisMaintenanceDose.mgPerHour).toBeCloseTo(12851.4938488576, 10);
-    expect(result.dialysisMaintenanceDose.mlPerHour).toBeCloseTo(128.514938488576, 10);
+    expect(result.dialysisMaintenanceDose.mlPerHour).toBeCloseTo(101.459161964666, 10);
     expect(result.selectedMaintenanceDose).toBe(result.maintenanceDose);
   });
 
@@ -35,11 +36,11 @@ describe("ethanol dosing calculations", () => {
     });
 
     expect(result.loadingDose.mg).toBeCloseTo(9840, 10);
-    expect(result.loadingDose.ml).toBeCloseTo(98.4, 10);
+    expect(result.loadingDose.ml).toBeCloseTo(77.6842105263158, 10);
     expect(result.maintenanceDose.mgPerHour).toBeCloseTo(12609.841827768, 10);
-    expect(result.maintenanceDose.mlPerHour).toBeCloseTo(126.09841827768, 10);
+    expect(result.maintenanceDose.mlPerHour).toBeCloseTo(99.5513828508001, 10);
     expect(result.dialysisMaintenanceDose.mgPerHour).toBeCloseTo(23418.2776801406, 10);
-    expect(result.dialysisMaintenanceDose.mlPerHour).toBeCloseTo(234.182776801406, 10);
+    expect(result.dialysisMaintenanceDose.mlPerHour).toBeCloseTo(184.881139580057, 10);
     expect(result.selectedMaintenanceDose).toBe(result.dialysisMaintenanceDose);
   });
 
@@ -52,7 +53,22 @@ describe("ethanol dosing calculations", () => {
   });
 
   it("converts mg ethanol to ml infusion solution", () => {
-    expect(convertMgToInfusionMl(7800)).toBeCloseTo(78, 10);
+    expect(convertMgToInfusionMl(7800)).toBeCloseTo(61.5789473684211, 10);
+  });
+
+  it("calculates infusion concentration from ethanol 96 percent v/v in glucose 5 percent", () => {
+    const result = calculateEthanol96Infusion(50, 300);
+
+    expect(result.ethanolGram).toBe(38);
+    expect(result.infusionConcentrationGPerL).toBeCloseTo(126.666666666667, 10);
+    expect(result.exceedsFinalVolume).toBe(false);
+  });
+
+  it("flags ethanol 96 percent v/v volumes that exceed the final volume", () => {
+    const result = calculateEthanol96Infusion(60, 50);
+
+    expect(result.ethanol96VolumeMl).toBe(60);
+    expect(result.exceedsFinalVolume).toBe(true);
   });
 
   it("clamps loading dose to zero at or above target concentration", () => {

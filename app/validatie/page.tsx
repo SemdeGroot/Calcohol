@@ -72,8 +72,10 @@ export default function ValidatiePage() {
           Daarbij is Km 138 mg/L en de streefconcentratie 1000 mg/L. Vmax is
           75 mg/kg/uur voor een niet-drinker en 175 mg/kg/uur voor een chronische
           drinker. Vd is 0,7 L/kg voor een man en 0,6 L/kg voor een vrouw. De
-          ml-uitkomsten zijn afhankelijk van de gekozen bereiding. Standaard rekent
-          EthaDose met 100 g/L, oftewel 50 g ethanol in 500 ml totaal volume.
+          ml-uitkomsten zijn afhankelijk van de gekozen bereiding. In de
+          calculator staat standaard 50 ml ethanol 96% v/v, aangevuld met
+          glucose 5% tot 300 ml eindvolume. Voor de dosisomrekening is dat
+          126,7 g/L ethanol.
         </p>
       </ContentSection>
 

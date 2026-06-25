@@ -35,3 +35,7 @@ export function formatMlPerHour(value: number): string {
 export function formatGPerL(value: number): string {
   return `${formatOneDecimal(value)} g/L`;
 }
+
+export function formatMgPerMl(value: number): string {
+  return `${formatOneDecimal(value)} mg/ml`;
+}

@@ -4,7 +4,6 @@ import * as React from "react";
 import Link from "next/link";
 import {
   Activity,
-  BookOpen,
   Calculator,
   FunctionSquare,
   Info,
@@ -15,13 +14,6 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -31,24 +23,25 @@ import {
   DRINKER_PROFILES,
   VOLUME_DISTRIBUTION_PROFILES,
   calculateEthanolDosing,
+  calculateEthanol96Infusion,
   type CalculatorSettings,
   type DrinkerStatus,
   type VolumeOfDistributionProfileId,
 } from "./calculations";
 import {
-  formatGPerL,
   formatMg,
   formatMgPerHour,
+  formatMgPerMl,
   formatMl,
   formatMlPerHour,
   formatOneDecimal,
 } from "./format";
-import { REFERENCE, SOURCE_SECTIONS } from "./content";
+import { REFERENCE } from "./content";
 
 type TargetMode = "1000" | "1500" | "custom";
 
-const DEFAULT_ETHANOL_GRAM = "50";
-const DEFAULT_TOTAL_VOLUME_ML = "500";
+const DEFAULT_ETHANOL_96_VOLUME_ML = "50";
+const DEFAULT_TOTAL_VOLUME_ML = "300";
 
 export function CalculatorScreen() {
   const [weightKg, setWeightKg] = React.useState("70");
@@ -61,23 +54,30 @@ export function CalculatorScreen() {
     React.useState("1000");
   const [volumeOfDistributionProfile, setVolumeOfDistributionProfile] =
     React.useState<VolumeOfDistributionProfileId>("male");
-  const [ethanolGram, setEthanolGram] = React.useState(DEFAULT_ETHANOL_GRAM);
+  const [ethanol96VolumeMl, setEthanol96VolumeMl] = React.useState(
+    DEFAULT_ETHANOL_96_VOLUME_ML,
+  );
   const [totalVolumeMl, setTotalVolumeMl] = React.useState(
     DEFAULT_TOTAL_VOLUME_ML,
   );
-  const [sourceOpen, setSourceOpen] = React.useState(false);
 
   const parsedWeight = parseDecimalInput(weightKg);
   const parsedEthanol = parseDecimalInput(currentEthanolMgPerL);
   const parsedCustomTarget = parseDecimalInput(customTargetEthanolMgPerL);
-  const parsedEthanolGram = parseDecimalInput(ethanolGram);
+  const parsedEthanol96VolumeMl = parseDecimalInput(ethanol96VolumeMl);
   const parsedTotalVolumeMl = parseDecimalInput(totalVolumeMl);
-  const infusionConcentrationGPerL =
-    parsedEthanolGram !== null &&
+  const infusionPreparation =
+    parsedEthanol96VolumeMl !== null &&
     parsedTotalVolumeMl !== null &&
+    parsedEthanol96VolumeMl > 0 &&
     parsedTotalVolumeMl > 0
-      ? parsedEthanolGram / (parsedTotalVolumeMl / 1000)
+      ? calculateEthanol96Infusion(
+          parsedEthanol96VolumeMl,
+          parsedTotalVolumeMl,
+        )
       : null;
+  const infusionConcentrationGPerL =
+    infusionPreparation?.infusionConcentrationGPerL ?? null;
   const targetEthanolMgPerL =
     targetMode === "custom" ? parsedCustomTarget : Number(targetMode);
   const volumeOfDistributionLPerKg =
@@ -109,7 +109,7 @@ export function CalculatorScreen() {
       dialysis ||
       targetMode !== "1000" ||
       volumeOfDistributionProfile !== "male" ||
-      ethanolGram !== DEFAULT_ETHANOL_GRAM ||
+      ethanol96VolumeMl !== DEFAULT_ETHANOL_96_VOLUME_ML ||
       totalVolumeMl !== DEFAULT_TOTAL_VOLUME_ML,
   );
   const result =
@@ -132,7 +132,7 @@ export function CalculatorScreen() {
     setTargetMode("1000");
     setCustomTargetEthanolMgPerL("1000");
     setVolumeOfDistributionProfile("male");
-    setEthanolGram(DEFAULT_ETHANOL_GRAM);
+    setEthanol96VolumeMl(DEFAULT_ETHANOL_96_VOLUME_ML);
     setTotalVolumeMl(DEFAULT_TOTAL_VOLUME_ML);
   };
 
@@ -165,9 +165,9 @@ export function CalculatorScreen() {
           </p>
         </header>
 
-        <div className="flex flex-col items-stretch gap-4 min-[820px]:flex-row">
+        <div className="grid items-stretch gap-4 min-[820px]:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
           <Card
-            className="reveal min-[820px]:flex-[0.95]"
+            className="reveal order-1 h-full"
             style={{ animationDelay: "100ms" }}
           >
             <CardContent className="flex flex-col gap-4">
@@ -229,16 +229,11 @@ export function CalculatorScreen() {
                 targetMode={targetMode}
                 customTargetEthanolMgPerL={customTargetEthanolMgPerL}
                 volumeOfDistributionProfile={volumeOfDistributionProfile}
-                ethanolGram={ethanolGram}
-                totalVolumeMl={totalVolumeMl}
-                infusionConcentrationGPerL={infusionConcentrationGPerL}
                 onTargetModeChange={setTargetMode}
                 onCustomTargetChange={setCustomTargetEthanolMgPerL}
                 onVolumeOfDistributionProfileChange={
                   setVolumeOfDistributionProfile
                 }
-                onEthanolGramChange={setEthanolGram}
-                onTotalVolumeChange={setTotalVolumeMl}
               />
 
               {hasInput ? (
@@ -254,7 +249,7 @@ export function CalculatorScreen() {
             </CardContent>
           </Card>
 
-          <div className="flex flex-col gap-4 min-[820px]:flex-[1.05]">
+          <div className="order-2 flex flex-col gap-4">
             <Card className="reveal" style={{ animationDelay: "160ms" }}>
               <CardContent className="flex flex-col gap-4">
                 <h2 className="text-title-md font-semibold text-foreground">
@@ -314,29 +309,25 @@ export function CalculatorScreen() {
               </CardContent>
             </Card>
 
+            <InfusionPreparationCard
+              ethanol96VolumeMl={ethanol96VolumeMl}
+              totalVolumeMl={totalVolumeMl}
+              infusionConcentrationGPerL={infusionConcentrationGPerL}
+              onEthanol96VolumeChange={setEthanol96VolumeMl}
+              onTotalVolumeChange={setTotalVolumeMl}
+            />
+
             <FormulaPanel
               drinkerStatus={drinkerStatus}
               dialysis={dialysis}
               currentEthanolMgPerL={parsedEthanol}
               settings={settings}
             />
-
-            <Button
-              variant="secondary"
-              onClick={() => setSourceOpen(true)}
-              className="reveal w-full"
-              style={{ animationDelay: "280ms" }}
-            >
-              <BookOpen className="size-[18px]" strokeWidth={1.75} />
-              Bron en methode
-            </Button>
           </div>
         </div>
 
         <Footer />
       </div>
-
-      <SourceModal open={sourceOpen} onOpenChange={setSourceOpen} />
     </main>
   );
 }
@@ -391,32 +382,20 @@ function DoseSettings({
   targetMode,
   customTargetEthanolMgPerL,
   volumeOfDistributionProfile,
-  ethanolGram,
-  totalVolumeMl,
-  infusionConcentrationGPerL,
   onTargetModeChange,
   onCustomTargetChange,
   onVolumeOfDistributionProfileChange,
-  onEthanolGramChange,
-  onTotalVolumeChange,
 }: {
   targetMode: TargetMode;
   customTargetEthanolMgPerL: string;
   volumeOfDistributionProfile: VolumeOfDistributionProfileId;
-  ethanolGram: string;
-  totalVolumeMl: string;
-  infusionConcentrationGPerL: number | null;
   onTargetModeChange: (value: TargetMode) => void;
   onCustomTargetChange: (value: string) => void;
   onVolumeOfDistributionProfileChange: (
     value: VolumeOfDistributionProfileId,
   ) => void;
-  onEthanolGramChange: (value: string) => void;
-  onTotalVolumeChange: (value: string) => void;
 }) {
   const parsedCustomTarget = parseDecimalInput(customTargetEthanolMgPerL);
-  const parsedEthanolGram = parseDecimalInput(ethanolGram);
-  const parsedTotalVolumeMl = parseDecimalInput(totalVolumeMl);
   const volumeOfDistributionLPerKg =
     VOLUME_DISTRIBUTION_PROFILES[volumeOfDistributionProfile]
       .volumeOfDistributionLPerKg;
@@ -424,14 +403,6 @@ function DoseSettings({
     targetMode === "custom" &&
     (parsedCustomTarget === null || parsedCustomTarget <= 0)
       ? "Vul een streefconcentratie groter dan 0 in."
-      : undefined;
-  const ethanolGramError =
-    parsedEthanolGram === null || parsedEthanolGram <= 0
-      ? "Vul een hoeveelheid groter dan 0 in."
-      : undefined;
-  const totalVolumeError =
-    parsedTotalVolumeMl === null || parsedTotalVolumeMl <= 0
-      ? "Vul een volume groter dan 0 in."
       : undefined;
 
   return (
@@ -487,35 +458,99 @@ function DoseSettings({
           text={`Vd ${formatOneDecimal(volumeOfDistributionLPerKg)} L/kg bepaalt de oplaaddosis.`}
         />
       </div>
+    </div>
+  );
+}
 
-      <div className="flex flex-col gap-2">
-        <span className="text-body-sm font-semibold text-foreground">
-          Infuusbereiding
-        </span>
+function InfusionPreparationCard({
+  ethanol96VolumeMl,
+  totalVolumeMl,
+  infusionConcentrationGPerL,
+  onEthanol96VolumeChange,
+  onTotalVolumeChange,
+}: {
+  ethanol96VolumeMl: string;
+  totalVolumeMl: string;
+  infusionConcentrationGPerL: number | null;
+  onEthanol96VolumeChange: (value: string) => void;
+  onTotalVolumeChange: (value: string) => void;
+}) {
+  const parsedEthanol96VolumeMl = parseDecimalInput(ethanol96VolumeMl);
+  const parsedTotalVolumeMl = parseDecimalInput(totalVolumeMl);
+  const ethanol96VolumeError =
+    parsedEthanol96VolumeMl === null || parsedEthanol96VolumeMl <= 0
+      ? "Vul een volume groter dan 0 in."
+      : undefined;
+  const totalVolumeError =
+    parsedTotalVolumeMl === null || parsedTotalVolumeMl <= 0
+      ? "Vul een volume groter dan 0 in."
+      : undefined;
+  const preparation =
+    parsedEthanol96VolumeMl !== null &&
+    parsedEthanol96VolumeMl > 0 &&
+    parsedTotalVolumeMl !== null &&
+    parsedTotalVolumeMl > 0
+      ? calculateEthanol96Infusion(
+          parsedEthanol96VolumeMl,
+          parsedTotalVolumeMl,
+        )
+      : null;
+
+  return (
+    <Card className="reveal" style={{ animationDelay: "250ms" }}>
+      <CardContent className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-title-md font-semibold text-foreground">
+            Infuusbereiding
+          </h2>
+          <p className="text-caption text-muted-foreground">
+            Standaard: 50 ml ethanol 96% v/v met glucose 5% tot 300 ml
+            eindvolume. Pas alleen aan als de lokale bereiding afwijkt.
+          </p>
+        </div>
+
         <NumberField
-          id="ethanol-gram"
-          label="Ethanol"
-          unit="g"
-          value={ethanolGram}
-          onChange={onEthanolGramChange}
-          error={ethanolGramError}
+          id="ethanol-96-volume"
+          label="Ethanol 96% v/v"
+          unit="ml"
+          value={ethanol96VolumeMl}
+          onChange={onEthanol96VolumeChange}
+          error={ethanol96VolumeError}
         />
         <NumberField
           id="total-volume"
-          label="Totaal volume"
+          label="Eindvolume"
           unit="ml"
           value={totalVolumeMl}
           onChange={onTotalVolumeChange}
           error={totalVolumeError}
         />
+
         {infusionConcentrationGPerL !== null ? (
           <InlineNotice
             icon={Info}
-            text={`Dit is ${formatGPerL(infusionConcentrationGPerL)} (${formatOneDecimal(infusionConcentrationGPerL / 10)}%). Pas aan naar je eigen bereiding.`}
+            text={
+              preparation
+                ? `Rekenwaarde voor dosisomrekening: ${formatMg(preparation.ethanolGram * 1000)} ethanol / ${formatOneDecimal(parsedTotalVolumeMl ?? 0)} ml = ${formatMgPerMl(infusionConcentrationGPerL)}.`
+                : `Rekenwaarde voor dosisomrekening: ${formatMgPerMl(infusionConcentrationGPerL)}.`
+            }
+          />
+        ) : (
+          <InlineNotice
+            icon={Info}
+            text="Vul ethanol en eindvolume in om de infuusconcentratie te berekenen."
+          />
+        )}
+
+        {preparation?.exceedsFinalVolume ? (
+          <InlineNotice
+            icon={Info}
+            tone="warning"
+            text="Het berekende volume ethanol 96% v/v is groter dan het eindvolume. Controleer de ingevoerde bereiding."
           />
         ) : null}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -608,7 +643,7 @@ function AssumptionSummary({ settings }: { settings: CalculatorSettings }) {
         text={`Vd ${formatOneDecimal(settings.volumeOfDistributionLPerKg)} L/kg`}
       />
       <AssumptionPill
-        text={`Infuus ${formatGPerL(settings.infusionConcentrationGPerL)}`}
+        text={`Infuus ${formatMgPerMl(settings.infusionConcentrationGPerL)}`}
       />
     </div>
   );
@@ -626,7 +661,7 @@ function InfusionBasis({ settings }: { settings: CalculatorSettings }) {
   return (
     <p className="pt-2 text-caption text-muted-foreground">
       Omrekening naar infuusvolume gebruikt{" "}
-      {formatGPerL(settings.infusionConcentrationGPerL)}.
+      {formatMgPerMl(settings.infusionConcentrationGPerL)}.
     </p>
   );
 }
@@ -703,17 +738,14 @@ function FormulaPanel({
         <FormulaLine
           label="Oplaaddosis"
           formula="Vd x gewicht x max(0, Cdoel - Cethanol)"
-          detail={`Ingevuld: ${formatOneDecimal(settings.volumeOfDistributionLPerKg)} L/kg x gewicht x max(0, ${formatOneDecimal(settings.targetEthanolMgPerL)} - gemeten ethanol)`}
         />
         <FormulaLine
           label="Onderhoud"
           formula="1000 x Vmax x gewicht / (Km + Cdoel)"
-          detail={`Ingevuld: 1000 x ${vmax} mg/kg/uur x gewicht / (138 + ${formatOneDecimal(settings.targetEthanolMgPerL)})`}
         />
         <FormulaLine
           label="Omrekening naar infuus"
-          formula="dosis ethanol / infuusconcentratie"
-          detail={`Ingevuld: mg ethanol / ${formatGPerL(settings.infusionConcentrationGPerL)}`}
+          formula="dosis ethanol (mg) / infuusconcentratie (mg/ml)"
         />
 
         {currentEthanolMgPerL !== null &&
@@ -731,11 +763,9 @@ function FormulaPanel({
 function FormulaLine({
   label,
   formula,
-  detail,
 }: {
   label: string;
   formula: string;
-  detail?: string;
 }) {
   return (
     <div className="flex flex-col gap-1 rounded-md bg-panel-soft p-3">
@@ -743,66 +773,7 @@ function FormulaLine({
         {label}
       </span>
       <span className="text-body-sm text-foreground">{formula}</span>
-      {detail ? (
-        <span className="text-caption text-muted-foreground">{detail}</span>
-      ) : null}
     </div>
-  );
-}
-
-function SourceModal({
-  open,
-  onOpenChange,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Bron en methode</DialogTitle>
-          <DialogDescription>
-            Waarom 1000 mg/L de standaardwaarde is en welke aannames lokaal
-            kunnen afwijken.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="flex flex-col gap-4">
-          {SOURCE_SECTIONS.map((section) => (
-            <section key={section.title} className="flex flex-col gap-2">
-              <h3 className="text-body-sm font-semibold text-foreground">
-                {section.title}
-              </h3>
-              <div className="flex flex-col gap-2">
-                {section.paragraphs.map((paragraph, index) => (
-                  <p
-                    key={index}
-                    className="text-body-sm text-muted-foreground"
-                  >
-                    {paragraph}
-                  </p>
-                ))}
-              </div>
-            </section>
-          ))}
-
-          <div className="rounded-md bg-panel-soft p-3">
-            <p className="text-caption text-muted-foreground">
-              Deze tekst verklaart de berekening. EthaDose is geen
-              behandelprotocol.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-2 border-t border-border pt-4">
-            <h3 className="text-body-sm font-semibold text-foreground">
-              Referentie
-            </h3>
-            <p className="text-caption text-muted-foreground">{REFERENCE}</p>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
   );
 }
 
@@ -824,6 +795,7 @@ function Footer() {
         <nav className="flex flex-wrap gap-x-5 gap-y-1.5">
           {[
             { href: "/validatie/", label: "Validatie" },
+            { href: "/bron/", label: "Bron" },
             { href: "/voorwaarden/", label: "Voorwaarden" },
             { href: "/privacy/", label: "Privacy" },
             { href: "/cookies/", label: "Cookies" },
@@ -843,7 +815,6 @@ function Footer() {
         <p className="text-caption text-muted-foreground">
           EthaDose is een berekeningshulpmiddel, geen behandelprotocol.
         </p>
-        <p className="text-caption text-muted-foreground">Bron: {REFERENCE}</p>
       </div>
     </footer>
   );

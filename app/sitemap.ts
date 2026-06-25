@@ -12,6 +12,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 1,
     },
     { url: `${SITE_URL}/validatie/`, changeFrequency: "monthly", priority: 0.6 },
+    { url: `${SITE_URL}/bron/`, changeFrequency: "yearly", priority: 0.5 },
     {
       url: `${SITE_URL}/voorwaarden/`,
       changeFrequency: "yearly",

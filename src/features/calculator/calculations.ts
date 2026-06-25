@@ -53,9 +53,10 @@ export const CALCULATOR_CONSTANTS = {
   kmMgPerL: 138,
   volumeOfDistributionLPerKg: 0.6,
   dialysisClearanceMgKgHour: 150,
-  ethanolStockMg: 50000,
-  infusionVolumeMl: 500,
-  infusionConcentrationGPerL: 50000 / 500,
+  ethanolStockMg: 38000,
+  ethanolStockVolumeMl: 50,
+  infusionVolumeMl: 300,
+  infusionConcentrationGPerL: 38000 / 300,
 } as const;
 
 export const TARGET_ETHANOL_OPTIONS_MG_PER_L = [1000, 1500] as const;
@@ -135,6 +136,27 @@ export function convertMgToInfusionMl(
   infusionConcentrationGPerL = DEFAULT_CALCULATOR_SETTINGS.infusionConcentrationGPerL,
 ): number {
   return doseMg / infusionConcentrationGPerL;
+}
+
+export function calculateEthanol96Infusion(
+  ethanol96VolumeMl: number,
+  totalVolumeMl: number,
+) {
+  if (ethanol96VolumeMl <= 0 || totalVolumeMl <= 0) {
+    throw new CalculatorInputError("Bereidingswaarden moeten groter zijn dan 0.");
+  }
+
+  const ethanolMg =
+    (ethanol96VolumeMl / CALCULATOR_CONSTANTS.ethanolStockVolumeMl) *
+    CALCULATOR_CONSTANTS.ethanolStockMg;
+  const infusionConcentrationGPerL = ethanolMg / totalVolumeMl;
+
+  return {
+    ethanolGram: ethanolMg / 1000,
+    ethanol96VolumeMl,
+    infusionConcentrationGPerL,
+    exceedsFinalVolume: ethanol96VolumeMl >= totalVolumeMl,
+  };
 }
 
 export function calculateEthanolDosing(input: CalculatorInput): CalculatorResult {
