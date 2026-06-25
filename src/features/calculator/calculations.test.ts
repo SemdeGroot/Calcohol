@@ -59,6 +59,45 @@ describe("ethanol dosing calculations", () => {
     expect(calculateLoadingDoseMg(65, 1200)).toBe(0);
   });
 
+  it("uses a higher target concentration when selected", () => {
+    const result = calculateEthanolDosing({
+      weightKg: 65,
+      currentEthanolMgPerL: 800,
+      drinkerStatus: "nonDrinker",
+      dialysis: false,
+      settings: {
+        targetEthanolMgPerL: 1500,
+      },
+    });
+
+    expect(result.loadingDose.mg).toBeCloseTo(27300, 10);
+    expect(result.maintenanceDose.mgPerHour).toBeCloseTo(2976.190476190476, 10);
+  });
+
+  it("clamps loading dose against a custom target concentration", () => {
+    expect(calculateLoadingDoseMg(65, 800, 700)).toBe(0);
+    expect(calculateLoadingDoseMg(65, 800, 1500)).toBeCloseTo(27300, 10);
+  });
+
+  it("uses distribution volume only for the loading dose", () => {
+    const result = calculateEthanolDosing({
+      weightKg: 65,
+      currentEthanolMgPerL: 800,
+      drinkerStatus: "nonDrinker",
+      dialysis: false,
+      settings: {
+        volumeOfDistributionLPerKg: 0.7,
+      },
+    });
+
+    expect(result.loadingDose.mg).toBeCloseTo(9100, 10);
+    expect(result.maintenanceDose.mgPerHour).toBeCloseTo(4283.83128295255, 10);
+  });
+
+  it("converts dose to ml using a local infusion concentration", () => {
+    expect(convertMgToInfusionMl(7800, 100)).toBeCloseTo(78, 10);
+  });
+
   it("rejects missing weight", () => {
     expect(() =>
       calculateEthanolDosing({
@@ -96,6 +135,38 @@ describe("ethanol dosing calculations", () => {
         currentEthanolMgPerL: -1,
         drinkerStatus: "nonDrinker",
         dialysis: false,
+      }),
+    ).toThrow(CalculatorInputError);
+  });
+
+  it("rejects invalid calculator settings", () => {
+    expect(() =>
+      calculateEthanolDosing({
+        weightKg: 65,
+        currentEthanolMgPerL: 800,
+        drinkerStatus: "nonDrinker",
+        dialysis: false,
+        settings: { targetEthanolMgPerL: 0 },
+      }),
+    ).toThrow(CalculatorInputError);
+
+    expect(() =>
+      calculateEthanolDosing({
+        weightKg: 65,
+        currentEthanolMgPerL: 800,
+        drinkerStatus: "nonDrinker",
+        dialysis: false,
+        settings: { volumeOfDistributionLPerKg: 0 },
+      }),
+    ).toThrow(CalculatorInputError);
+
+    expect(() =>
+      calculateEthanolDosing({
+        weightKg: 65,
+        currentEthanolMgPerL: 800,
+        drinkerStatus: "nonDrinker",
+        dialysis: false,
+        settings: { infusionConcentrationGPerL: 0 },
       }),
     ).toThrow(CalculatorInputError);
   });

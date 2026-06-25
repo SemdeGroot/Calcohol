@@ -21,11 +21,17 @@ import SecondaryButton from "@/components/ui/SecondaryButton";
 import { useTheme } from "@/state/theme";
 import {
   CALCULATOR_CONSTANTS,
+  DEFAULT_CALCULATOR_SETTINGS,
   DRINKER_PROFILES,
+  VOLUME_DISTRIBUTION_PROFILES,
   calculateEthanolDosing,
+  type CalculatorSettings,
   type DrinkerStatus,
+  type VolumeOfDistributionProfileId,
 } from "./calculations";
-import { formatMg, formatMgPerHour, formatMl, formatMlPerHour } from "./format";
+import { formatGPerL, formatMg, formatMgPerHour, formatMl, formatMlPerHour, formatOneDecimal } from "./format";
+
+type TargetMode = "1000" | "1500" | "custom";
 
 export function CalculatorScreen() {
   const theme = useTheme();
@@ -35,18 +41,55 @@ export function CalculatorScreen() {
   const [currentEthanolMgPerL, setCurrentEthanolMgPerL] = React.useState("");
   const [drinkerStatus, setDrinkerStatus] = React.useState<DrinkerStatus>("nonDrinker");
   const [dialysis, setDialysis] = React.useState(false);
+  const [targetMode, setTargetMode] = React.useState<TargetMode>("1000");
+  const [customTargetEthanolMgPerL, setCustomTargetEthanolMgPerL] = React.useState("");
+  const [volumeOfDistributionProfile, setVolumeOfDistributionProfile] =
+    React.useState<VolumeOfDistributionProfileId>("female");
+  const [infusionConcentrationGPerL, setInfusionConcentrationGPerL] = React.useState(
+    formatOneDecimal(DEFAULT_CALCULATOR_SETTINGS.infusionConcentrationGPerL),
+  );
   const [sourceOpen, setSourceOpen] = React.useState(false);
   const parsedWeight = parseDecimalInput(weightKg);
   const parsedEthanol = parseDecimalInput(currentEthanolMgPerL);
+  const parsedCustomTarget = parseDecimalInput(customTargetEthanolMgPerL);
+  const parsedInfusionConcentration = parseDecimalInput(infusionConcentrationGPerL);
+  const targetEthanolMgPerL = targetMode === "custom" ? parsedCustomTarget : Number(targetMode);
+  const volumeOfDistributionLPerKg =
+    VOLUME_DISTRIBUTION_PROFILES[volumeOfDistributionProfile].volumeOfDistributionLPerKg;
+  const settings: CalculatorSettings = {
+    targetEthanolMgPerL: targetEthanolMgPerL ?? DEFAULT_CALCULATOR_SETTINGS.targetEthanolMgPerL,
+    volumeOfDistributionLPerKg,
+    infusionConcentrationGPerL:
+      parsedInfusionConcentration ?? DEFAULT_CALCULATOR_SETTINGS.infusionConcentrationGPerL,
+  };
+  const settingsAreValid =
+    targetEthanolMgPerL !== null &&
+    targetEthanolMgPerL > 0 &&
+    parsedInfusionConcentration !== null &&
+    parsedInfusionConcentration > 0;
   const canCalculate =
-    parsedWeight !== null && parsedWeight > 0 && parsedEthanol !== null && parsedEthanol >= 0;
-  const hasInput = Boolean(weightKg.trim() || currentEthanolMgPerL.trim() || drinkerStatus !== "nonDrinker" || dialysis);
+    parsedWeight !== null &&
+    parsedWeight > 0 &&
+    parsedEthanol !== null &&
+    parsedEthanol >= 0 &&
+    settingsAreValid;
+  const hasInput = Boolean(
+    weightKg.trim() ||
+      currentEthanolMgPerL.trim() ||
+      drinkerStatus !== "nonDrinker" ||
+      dialysis ||
+      targetMode !== "1000" ||
+      customTargetEthanolMgPerL.trim() ||
+      volumeOfDistributionProfile !== "female" ||
+      infusionConcentrationGPerL !== formatOneDecimal(DEFAULT_CALCULATOR_SETTINGS.infusionConcentrationGPerL),
+  );
   const result = canCalculate
     ? calculateEthanolDosing({
         weightKg: parsedWeight,
         currentEthanolMgPerL: parsedEthanol,
         drinkerStatus,
         dialysis,
+        settings,
       })
     : null;
   const aboveTarget = result !== null && result.loadingDose.mg === 0;
@@ -157,6 +200,17 @@ export function CalculatorScreen() {
                   ) : null}
                 </View>
 
+                <DoseSettings
+                  targetMode={targetMode}
+                  customTargetEthanolMgPerL={customTargetEthanolMgPerL}
+                  volumeOfDistributionProfile={volumeOfDistributionProfile}
+                  infusionConcentrationGPerL={infusionConcentrationGPerL}
+                  onTargetModeChange={setTargetMode}
+                  onCustomTargetChange={setCustomTargetEthanolMgPerL}
+                  onVolumeOfDistributionProfileChange={setVolumeOfDistributionProfile}
+                  onInfusionConcentrationChange={setInfusionConcentrationGPerL}
+                />
+
                 {hasInput ? (
                   <SecondaryButton
                     title="Wis invoer"
@@ -166,6 +220,12 @@ export function CalculatorScreen() {
                       setCurrentEthanolMgPerL("");
                       setDrinkerStatus("nonDrinker");
                       setDialysis(false);
+                      setTargetMode("1000");
+                      setCustomTargetEthanolMgPerL("");
+                      setVolumeOfDistributionProfile("female");
+                      setInfusionConcentrationGPerL(
+                        formatOneDecimal(DEFAULT_CALCULATOR_SETTINGS.infusionConcentrationGPerL),
+                      );
                     }}
                   />
                 ) : null}
@@ -186,7 +246,7 @@ export function CalculatorScreen() {
                         primary={aboveTarget ? "Geen oplaaddosis nodig" : formatMg(result.loadingDose.mg)}
                         secondary={
                           aboveTarget
-                            ? `Gemeten ethanol is op of boven ${CALCULATOR_CONSTANTS.targetEthanolMgPerL} mg/L.`
+                            ? `Gemeten ethanol is op of boven ${formatOneDecimal(settings.targetEthanolMgPerL)} mg/L.`
                             : formatMl(result.loadingDose.ml)
                         }
                       />
@@ -194,7 +254,7 @@ export function CalculatorScreen() {
                         <ResultRow
                           title={dialysis ? "Onderhoud tijdens dialyse" : "Onderhoudsdosering"}
                           primary="Geen onderhoudsdosering nodig"
-                          secondary={`Gemeten ethanol is op of boven ${CALCULATOR_CONSTANTS.targetEthanolMgPerL} mg/L.`}
+                          secondary={`Gemeten ethanol is op of boven ${formatOneDecimal(settings.targetEthanolMgPerL)} mg/L.`}
                           divider={false}
                         />
                       ) : (
@@ -205,9 +265,10 @@ export function CalculatorScreen() {
                             secondary={formatMlPerHour(result.selectedMaintenanceDose.mlPerHour)}
                             emphasized
                           />
-                          <InfusionBasis />
+                          <InfusionBasis settings={result.settings} />
                         </>
                       )}
+                      <AssumptionSummary settings={result.settings} />
                     </>
                   ) : (
                     <EmptyResult />
@@ -215,7 +276,12 @@ export function CalculatorScreen() {
                 </View>
               </Panel>
 
-              <FormulaPanel drinkerStatus={drinkerStatus} dialysis={dialysis} currentEthanolMgPerL={parsedEthanol} />
+              <FormulaPanel
+                drinkerStatus={drinkerStatus}
+                dialysis={dialysis}
+                currentEthanolMgPerL={parsedEthanol}
+                settings={settings}
+              />
 
               <SecondaryButton title="Bron en methode" icon={BookOpen} onPress={() => setSourceOpen(true)} />
             </View>
@@ -235,12 +301,14 @@ function NumberField({
   value,
   onChangeText,
   error,
+  helper,
 }: {
   label: string;
   unit: string;
   value: string;
   onChangeText: (value: string) => void;
   error?: string;
+  helper?: string;
 }) {
   const theme = useTheme();
   const [focused, setFocused] = React.useState(false);
@@ -284,7 +352,108 @@ function NumberField({
         <AppText variant="caption" color="danger">
           {error}
         </AppText>
+      ) : helper ? (
+        <AppText variant="caption" color="textSub">
+          {helper}
+        </AppText>
       ) : null}
+    </View>
+  );
+}
+
+function DoseSettings({
+  targetMode,
+  customTargetEthanolMgPerL,
+  volumeOfDistributionProfile,
+  infusionConcentrationGPerL,
+  onTargetModeChange,
+  onCustomTargetChange,
+  onVolumeOfDistributionProfileChange,
+  onInfusionConcentrationChange,
+}: {
+  targetMode: TargetMode;
+  customTargetEthanolMgPerL: string;
+  volumeOfDistributionProfile: VolumeOfDistributionProfileId;
+  infusionConcentrationGPerL: string;
+  onTargetModeChange: (value: TargetMode) => void;
+  onCustomTargetChange: (value: string) => void;
+  onVolumeOfDistributionProfileChange: (value: VolumeOfDistributionProfileId) => void;
+  onInfusionConcentrationChange: (value: string) => void;
+}) {
+  const theme = useTheme();
+  const parsedCustomTarget = parseDecimalInput(customTargetEthanolMgPerL);
+  const parsedInfusionConcentration = parseDecimalInput(infusionConcentrationGPerL);
+  const targetError =
+    targetMode === "custom" && (parsedCustomTarget === null || parsedCustomTarget <= 0)
+      ? "Vul een streefconcentratie groter dan 0 in."
+      : undefined;
+  const infusionError =
+    parsedInfusionConcentration === null || parsedInfusionConcentration <= 0
+      ? "Vul een infuusconcentratie groter dan 0 in."
+      : undefined;
+
+  return (
+    <View
+      style={{
+        gap: theme.space.md,
+        borderTopWidth: 1,
+        borderTopColor: theme.border,
+        paddingTop: theme.space.lg,
+      }}
+    >
+      <View style={{ gap: theme.space.xs }}>
+        <AppText variant="titleMd" weight="semibold">
+          Doseerinstellingen
+        </AppText>
+        <AppText variant="caption" color="textSub">
+          Spreadsheetwaarden staan standaard aan. Pas alleen aan volgens lokaal protocol of handboek.
+        </AppText>
+      </View>
+
+      <SegmentedControl
+        label="Streef ethanol"
+        value={targetMode}
+        options={[
+          { value: "1000", label: "1,0 promille" },
+          { value: "1500", label: "1,5 promille" },
+          { value: "custom", label: "Anders" },
+        ]}
+        onChange={onTargetModeChange}
+      />
+
+      {targetMode === "custom" ? (
+        <NumberField
+          label="Custom streefconcentratie"
+          unit="mg/L"
+          value={customTargetEthanolMgPerL}
+          onChangeText={onCustomTargetChange}
+          error={targetError}
+        />
+      ) : null}
+
+      <InlineNotice
+        icon={Info}
+        text="1000 mg/L is de bronwaarde uit het artikel en de spreadsheet. Lokale protocollen kunnen een hogere streefwaarde gebruiken."
+      />
+
+      <SegmentedControl
+        label="Verdelingsvolume"
+        value={volumeOfDistributionProfile}
+        options={[
+          { value: "male", label: "Man 0,7 L/kg" },
+          { value: "female", label: "Vrouw 0,6 L/kg" },
+        ]}
+        onChange={onVolumeOfDistributionProfileChange}
+      />
+
+      <NumberField
+        label="Infuusconcentratie"
+        unit="g/L"
+        value={infusionConcentrationGPerL}
+        onChangeText={onInfusionConcentrationChange}
+        error={infusionError}
+        helper="Neem de lokale handboekwaarde over. Spreadsheetdefault is 50 ml ethanol 96% v/v in 300 ml totaal."
+      />
     </View>
   );
 }
@@ -408,14 +577,53 @@ function ResultRow({
   );
 }
 
-function InfusionBasis() {
+function AssumptionSummary({ settings }: { settings: CalculatorSettings }) {
+  const theme = useTheme();
+
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: theme.space.sm,
+        paddingTop: theme.space.sm,
+      }}
+    >
+      <AssumptionPill text={`Doel ${formatOneDecimal(settings.targetEthanolMgPerL)} mg/L`} />
+      <AssumptionPill text={`Vd ${formatOneDecimal(settings.volumeOfDistributionLPerKg)} L/kg`} />
+      <AssumptionPill text={`Infuus ${formatGPerL(settings.infusionConcentrationGPerL)}`} />
+    </View>
+  );
+}
+
+function AssumptionPill({ text }: { text: string }) {
+  const theme = useTheme();
+
+  return (
+    <View
+      style={{
+        minHeight: 30,
+        justifyContent: "center",
+        borderRadius: theme.radius.full,
+        backgroundColor: theme.panelSoft,
+        paddingHorizontal: theme.space.md,
+      }}
+    >
+      <AppText variant="caption" color="textSub" weight="medium">
+        {text}
+      </AppText>
+    </View>
+  );
+}
+
+function InfusionBasis({ settings }: { settings: CalculatorSettings }) {
   const theme = useTheme();
 
   return (
     <View style={{ paddingTop: theme.space.sm }}>
       <AppText variant="caption" color="textSub">
-        Bereiding ethanolinfuus: 50 ml ethanol 96% v/v
-        toevoegen aan 250 ml glucose 5%.
+        Omrekening naar infuusvolume gebruikt {formatGPerL(settings.infusionConcentrationGPerL)}. Neem de lokale
+        handboekwaarde over als die afwijkt.
       </AppText>
     </View>
   );
@@ -469,10 +677,12 @@ function FormulaPanel({
   drinkerStatus,
   dialysis,
   currentEthanolMgPerL,
+  settings,
 }: {
   drinkerStatus: DrinkerStatus;
   dialysis: boolean;
   currentEthanolMgPerL: number | null;
+  settings: CalculatorSettings;
 }) {
   const theme = useTheme();
   const profile = DRINKER_PROFILES[drinkerStatus];
@@ -493,20 +703,20 @@ function FormulaPanel({
         <FormulaLine
           label="Oplaaddosis"
           formula="Vd x gewicht x max(0, Cdoel - Cethanol)"
-          detail="Ingevuld: 0,6 L/kg x gewicht x max(0, 1000 - gemeten ethanol)"
+          detail={`Ingevuld: ${formatOneDecimal(settings.volumeOfDistributionLPerKg)} L/kg x gewicht x max(0, ${formatOneDecimal(settings.targetEthanolMgPerL)} - gemeten ethanol)`}
         />
         <FormulaLine
           label="Onderhoud"
           formula="1000 x Vmax x gewicht / (Km + Cdoel)"
-          detail={`Ingevuld: 1000 x ${vmax} mg/kg/uur x gewicht / (138 + 1000)`}
+          detail={`Ingevuld: 1000 x ${vmax} mg/kg/uur x gewicht / (138 + ${formatOneDecimal(settings.targetEthanolMgPerL)})`}
         />
         <FormulaLine
           label="Omrekening naar infuus"
-          formula="dosis ethanol / ethanol per infuuszak x totaalvolume"
-          detail="Ingevuld: mg ethanol / 38000 mg x 300 ml"
+          formula="dosis ethanol / infuusconcentratie"
+          detail={`Ingevuld: mg ethanol / ${formatGPerL(settings.infusionConcentrationGPerL)}`}
         />
 
-        {currentEthanolMgPerL !== null && currentEthanolMgPerL >= CALCULATOR_CONSTANTS.targetEthanolMgPerL ? (
+        {currentEthanolMgPerL !== null && currentEthanolMgPerL >= settings.targetEthanolMgPerL ? (
           <AppText variant="bodySm" color="textSub">
             Boven de streefconcentratie is doseren niet nodig. AlcoTox toont dan geen oplaad- en geen
             onderhoudsdosering.
@@ -550,7 +760,7 @@ function SourceModal({ open, onClose }: { open: boolean; onClose: () => void }) 
       open={open}
       onClose={onClose}
       title="Bron en methode"
-      subtitle="Waarom de berekening uitgaat van een ethanolstreefconcentratie van 1000 mg/L."
+      subtitle="Waarom 1000 mg/L de standaardwaarde is en welke aannames lokaal kunnen afwijken."
     >
       <SourceSection title="Introductie">
         <AppText variant="bodySm" color="textSub">
@@ -594,12 +804,16 @@ function SourceModal({ open, onClose }: { open: boolean; onClose: () => void }) 
       <SourceSection title="Rekenmethode">
         <AppText variant="bodySm" color="textSub">
           Het artikel noemt een nagestreefde ethanolconcentratie van 1000 mg/L. De oplaaddosis vult alleen het verschil
-          aan tussen de gemeten ethanolconcentratie en deze streefwaarde. Ligt de gemeten waarde al op of boven 1000 mg/L,
-          dan toont AlcoTox geen oplaaddosis.
+          aan tussen de gemeten ethanolconcentratie en de gekozen streefwaarde. Ligt de gemeten waarde al op of boven de
+          gekozen streefwaarde, dan toont AlcoTox geen oplaaddosis.
         </AppText>
         <AppText variant="bodySm" color="textSub">
           De onderhoudsdosering gebruikt gewicht, Vmax en Km. Voor chronisch alcoholgebruik rekent AlcoTox met een hogere
           Vmax dan voor niet-drinkers. Bij dialyse telt AlcoTox extra klaring op.
+        </AppText>
+        <AppText variant="bodySm" color="textSub">
+          De infuusconcentratie wordt gebruikt voor de omrekening van mg ethanol naar ml infuusvolume. De standaardwaarde
+          komt overeen met de spreadsheetbereiding, maar kan worden aangepast aan het lokale handboek.
         </AppText>
       </SourceSection>
 

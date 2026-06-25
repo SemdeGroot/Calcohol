@@ -3,8 +3,17 @@ const numberFormatter = new Intl.NumberFormat("nl-NL", {
   minimumFractionDigits: 0,
 });
 
+const oneDecimalFormatter = new Intl.NumberFormat("nl-NL", {
+  maximumFractionDigits: 1,
+  minimumFractionDigits: 0,
+});
+
 export function formatNumber(value: number): string {
   return numberFormatter.format(value);
+}
+
+export function formatOneDecimal(value: number): string {
+  return oneDecimalFormatter.format(value);
 }
 
 export function formatMg(value: number): string {
@@ -21,4 +30,8 @@ export function formatMgPerHour(value: number): string {
 
 export function formatMlPerHour(value: number): string {
   return `${formatNumber(value)} ml/uur`;
+}
+
+export function formatGPerL(value: number): string {
+  return `${formatOneDecimal(value)} g/L`;
 }
