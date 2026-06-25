@@ -6,9 +6,9 @@
 
 - Doelgroep: ziekenhuisapothekers, klinisch toxicologen, SEH- en IC-clinici.
 - Oplaaddosis = Vd x gewicht x max(0, Cdoel - Cethanol), met Vd 0,7 L/kg (man) of 0,6 L/kg (vrouw).
-- Onderhoudsdosering = 1000 x Vmax x gewicht / (Km + Cdoel), met Km = 138 mg/L.
+- Onderhoudsdosering = Cdoel x Vmax x gewicht / (Km + Cdoel), met Km = 138 mg/L.
 - Vmax: 75 mg/kg/uur (niet-drinker) of 175 mg/kg/uur (chronische drinker).
-- Standaard streefconcentratie 1000 mg/L (circa 1,0 promille); 1,5 promille of een eigen waarde is instelbaar.
+- Standaard streefconcentratie 1000 mg/L; 1500 mg/L of een eigen waarde is instelbaar.
 - Bij dialyse wordt 150 mg/kg/uur extra klaring bij Vmax opgeteld.
 - Alle berekening gebeurt lokaal in de browser; patientgegevens verlaten het apparaat niet.
 

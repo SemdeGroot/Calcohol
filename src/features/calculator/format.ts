@@ -39,3 +39,11 @@ export function formatGPerL(value: number): string {
 export function formatMgPerMl(value: number): string {
   return `${formatOneDecimal(value)} mg/ml`;
 }
+
+export function formatMlOneDecimal(value: number): string {
+  return `${formatOneDecimal(value)} ml`;
+}
+
+export function formatHours(value: number): string {
+  return `${formatOneDecimal(value)} uur`;
+}

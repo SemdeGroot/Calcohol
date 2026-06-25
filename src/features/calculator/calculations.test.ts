@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   CalculatorInputError,
   calculateEthanolDosing,
-  calculateEthanol96Infusion,
+  calculateEthanolInfusion,
   calculateLoadingDoseMg,
   calculateMaintenanceDoseMgPerHour,
   convertMgToInfusionMl,
@@ -16,6 +16,9 @@ describe("ethanol dosing calculations", () => {
       currentEthanolMgPerL: 800,
       drinkerStatus: "nonDrinker",
       dialysis: false,
+      // Pin the spreadsheet preparation (50 ml 96% v/v in 300 ml) so the ml
+      // conversions reproduce the EtOHcalc.XLS reference outputs exactly.
+      settings: { infusionConcentrationGPerL: 38000 / 300 },
     });
 
     expect(result.loadingDose.mg).toBeCloseTo(7800, 10);
@@ -33,6 +36,7 @@ describe("ethanol dosing calculations", () => {
       currentEthanolMgPerL: 800,
       drinkerStatus: "chronicDrinker",
       dialysis: true,
+      settings: { infusionConcentrationGPerL: 38000 / 300 },
     });
 
     expect(result.loadingDose.mg).toBeCloseTo(9840, 10);
@@ -52,23 +56,35 @@ describe("ethanol dosing calculations", () => {
     expect(calculateMaintenanceDoseMgPerHour(65, 75 + 150)).toBeCloseTo(12851.4938488576, 10);
   });
 
-  it("converts mg ethanol to ml infusion solution", () => {
-    expect(convertMgToInfusionMl(7800)).toBeCloseTo(61.5789473684211, 10);
+  it("converts mg ethanol to ml infusion solution using the default 10 percent m/v concentration", () => {
+    expect(convertMgToInfusionMl(7800)).toBeCloseTo(78, 10);
   });
 
-  it("calculates infusion concentration from ethanol 96 percent v/v in glucose 5 percent", () => {
-    const result = calculateEthanol96Infusion(50, 300);
+  it("calculates how much ethanol to add to a glucose 5 percent bag", () => {
+    const result = calculateEthanolInfusion({
+      ethanolStrengthFraction: 0.96,
+      targetConcentrationMgPerMl: 100,
+      bagVolumeMl: 500,
+    });
 
-    expect(result.ethanolGram).toBe(38);
-    expect(result.infusionConcentrationGPerL).toBeCloseTo(126.666666666667, 10);
-    expect(result.exceedsFinalVolume).toBe(false);
+    // stock = 0.96 * 789 = 757.44 mg/ml; Vadd = 100 * 500 / (757.44 - 100)
+    expect(result.stockConcentrationMgPerMl).toBeCloseTo(757.44, 10);
+    expect(result.ethanolToAddMl).toBeCloseTo(76.05256753467998, 10);
+    expect(result.finalVolumeMl).toBeCloseTo(576.05256753468, 10);
+    expect(result.infusionConcentrationGPerL).toBe(100);
+    expect(result.feasible).toBe(true);
   });
 
-  it("flags ethanol 96 percent v/v volumes that exceed the final volume", () => {
-    const result = calculateEthanol96Infusion(60, 50);
+  it("flags an infeasible preparation when the target exceeds the stock strength", () => {
+    const result = calculateEthanolInfusion({
+      ethanolStrengthFraction: 0.05,
+      targetConcentrationMgPerMl: 100,
+      bagVolumeMl: 500,
+    });
 
-    expect(result.ethanol96VolumeMl).toBe(60);
-    expect(result.exceedsFinalVolume).toBe(true);
+    expect(result.feasible).toBe(false);
+    expect(result.ethanolToAddMl).toBe(0);
+    expect(result.finalVolumeMl).toBe(500);
   });
 
   it("clamps loading dose to zero at or above target concentration", () => {
@@ -88,7 +104,8 @@ describe("ethanol dosing calculations", () => {
     });
 
     expect(result.loadingDose.mg).toBeCloseTo(27300, 10);
-    expect(result.maintenanceDose.mgPerHour).toBeCloseTo(2976.190476190476, 10);
+    // Cdoel appears in the numerator too: 1500 x 75 x 65 / (138 + 1500).
+    expect(result.maintenanceDose.mgPerHour).toBeCloseTo(4464.285714285714, 10);
   });
 
   it("clamps loading dose against a custom target concentration", () => {

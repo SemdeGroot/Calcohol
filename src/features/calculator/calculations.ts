@@ -53,13 +53,19 @@ export const CALCULATOR_CONSTANTS = {
   kmMgPerL: 138,
   volumeOfDistributionLPerKg: 0.6,
   dialysisClearanceMgKgHour: 150,
-  ethanolStockMg: 38000,
-  ethanolStockVolumeMl: 50,
-  infusionVolumeMl: 300,
-  infusionConcentrationGPerL: 38000 / 300,
+  // Density of pure ethanol (~0.789 g/ml). Used to convert a volume-percentage
+  // stock (% v/v) to a mass concentration (mg/ml). Check: 50 ml 96% v/v equals
+  // 50 x 0.96 x 789 = 37872 mg, which the source spreadsheet rounds to 38000 mg.
+  ethanolDensityMgPerMl: 789,
+  // Default prepared infusion concentration: 10% m/v = 100 mg/ml.
+  defaultInfusionConcentrationMgPerMl: 100,
 } as const;
 
 export const TARGET_ETHANOL_OPTIONS_MG_PER_L = [1000, 1500] as const;
+
+export const ETHANOL_STRENGTH_OPTIONS = [0.96, 0.98] as const;
+
+export const BAG_VOLUME_OPTIONS_ML = [250, 500, 1000] as const;
 
 export const VOLUME_DISTRIBUTION_PROFILES: Record<
   VolumeOfDistributionProfileId,
@@ -84,7 +90,7 @@ export const VOLUME_DISTRIBUTION_PROFILES: Record<
 export const DEFAULT_CALCULATOR_SETTINGS: CalculatorSettings = {
   targetEthanolMgPerL: CALCULATOR_CONSTANTS.targetEthanolMgPerL,
   volumeOfDistributionLPerKg: CALCULATOR_CONSTANTS.volumeOfDistributionLPerKg,
-  infusionConcentrationGPerL: CALCULATOR_CONSTANTS.infusionConcentrationGPerL,
+  infusionConcentrationGPerL: CALCULATOR_CONSTANTS.defaultInfusionConcentrationMgPerMl,
 };
 
 export const DRINKER_PROFILES: Record<DrinkerStatus, DrinkerProfile> = {
@@ -128,7 +134,12 @@ export function calculateMaintenanceDoseMgPerHour(
   vmaxMgKgHour: number,
   targetEthanolMgPerL = DEFAULT_CALCULATOR_SETTINGS.targetEthanolMgPerL,
 ): number {
-  return (1000 * vmaxMgKgHour * weightKg) / (CALCULATOR_CONSTANTS.kmMgPerL + targetEthanolMgPerL);
+  // Michaelis-Menten steady state: D' = Cdoel x Vmax x gewicht / (Km + Cdoel).
+  // The target concentration appears in both numerator and denominator.
+  return (
+    (targetEthanolMgPerL * vmaxMgKgHour * weightKg) /
+    (CALCULATOR_CONSTANTS.kmMgPerL + targetEthanolMgPerL)
+  );
 }
 
 export function convertMgToInfusionMl(
@@ -138,24 +149,54 @@ export function convertMgToInfusionMl(
   return doseMg / infusionConcentrationGPerL;
 }
 
-export function calculateEthanol96Infusion(
-  ethanol96VolumeMl: number,
-  totalVolumeMl: number,
-) {
-  if (ethanol96VolumeMl <= 0 || totalVolumeMl <= 0) {
+export type EthanolInfusionInput = {
+  ethanolStrengthFraction: number;
+  targetConcentrationMgPerMl: number;
+  bagVolumeMl: number;
+};
+
+export type EthanolInfusionResult = {
+  ethanolToAddMl: number;
+  finalVolumeMl: number;
+  infusionConcentrationGPerL: number;
+  stockConcentrationMgPerMl: number;
+  feasible: boolean;
+};
+
+// Work out how much stock ethanol to add to a glucose 5% bag to reach a target
+// mass concentration. Mixing is treated as volume-additive.
+//   stockMgPerMl = strength(v/v) x ethanol density
+//   Vadd = Cdoel x Vzak / (stockMgPerMl - Cdoel)
+//   Veind = Vzak + Vadd
+export function calculateEthanolInfusion({
+  ethanolStrengthFraction,
+  targetConcentrationMgPerMl,
+  bagVolumeMl,
+}: EthanolInfusionInput): EthanolInfusionResult {
+  if (
+    ethanolStrengthFraction <= 0 ||
+    ethanolStrengthFraction > 1 ||
+    targetConcentrationMgPerMl <= 0 ||
+    bagVolumeMl <= 0
+  ) {
     throw new CalculatorInputError("Bereidingswaarden moeten groter zijn dan 0.");
   }
 
-  const ethanolMg =
-    (ethanol96VolumeMl / CALCULATOR_CONSTANTS.ethanolStockVolumeMl) *
-    CALCULATOR_CONSTANTS.ethanolStockMg;
-  const infusionConcentrationGPerL = ethanolMg / totalVolumeMl;
+  const stockConcentrationMgPerMl =
+    ethanolStrengthFraction * CALCULATOR_CONSTANTS.ethanolDensityMgPerMl;
+  const feasible = stockConcentrationMgPerMl > targetConcentrationMgPerMl;
+
+  const ethanolToAddMl = feasible
+    ? (targetConcentrationMgPerMl * bagVolumeMl) /
+      (stockConcentrationMgPerMl - targetConcentrationMgPerMl)
+    : 0;
 
   return {
-    ethanolGram: ethanolMg / 1000,
-    ethanol96VolumeMl,
-    infusionConcentrationGPerL,
-    exceedsFinalVolume: ethanol96VolumeMl >= totalVolumeMl,
+    ethanolToAddMl,
+    finalVolumeMl: bagVolumeMl + ethanolToAddMl,
+    infusionConcentrationGPerL: targetConcentrationMgPerMl,
+    stockConcentrationMgPerMl,
+    feasible,
   };
 }
 

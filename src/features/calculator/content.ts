@@ -58,17 +58,17 @@ export const FAQ: { question: string; answer: string }[] = [
   {
     question: "Hoe berekent EthaDose de oplaaddosis ethanol?",
     answer:
-      "De oplaaddosis is het verdelingsvolume maal het gewicht maal het verschil tussen de streefconcentratie en de gemeten ethanolconcentratie: Vd x gewicht x max(0, Cdoel - Cethanol). Ligt de gemeten ethanolwaarde al op of boven de streefwaarde, dan is geen oplaaddosis nodig.",
+      "De oplaaddosis is het verdelingsvolume maal het gewicht maal het verschil tussen de streefconcentratie en de gemeten ethanolconcentratie: D = Vd x gewicht x max(0, Cdoel - Cethanol). Ligt de gemeten ethanolwaarde al op of boven de streefwaarde, dan is geen oplaaddosis nodig.",
   },
   {
     question: "Waarom is de streefconcentratie 1000 mg/L?",
     answer:
-      "1000 mg/L (ongeveer 1,0 promille) is de streefwaarde uit het bronartikel. Lokale protocollen kunnen een hogere streefwaarde gebruiken, bijvoorbeeld 1,5 promille. In EthaDose is de streefconcentratie daarom instelbaar.",
+      "1000 mg/L is de streefwaarde uit het bronartikel. Lokale protocollen kunnen een hogere streefwaarde gebruiken, bijvoorbeeld 1500 mg/L. In EthaDose is de streefconcentratie daarom instelbaar.",
   },
   {
     question: "Hoe berekent EthaDose de onderhoudsdosering?",
     answer:
-      "De onderhoudsdosering volgt Michaelis-Menten-kinetiek: 1000 x Vmax x gewicht / (Km + Cdoel), met Km 138 mg/L. Voor chronische drinkers wordt een hogere Vmax gebruikt dan voor niet-drinkers.",
+      "De onderhoudsdosering volgt Michaelis-Menten-kinetiek: D' = Cdoel x Vmax x gewicht / (Km + Cdoel), met Km 138 mg/L. De streefconcentratie Cdoel staat in zowel teller als noemer. Voor chronische drinkers wordt een hogere Vmax gebruikt dan voor niet-drinkers.",
   },
   {
     question: "Wat verandert er tijdens dialyse?",

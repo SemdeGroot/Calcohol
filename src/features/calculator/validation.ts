@@ -55,8 +55,8 @@ const CASES: ValidationCase[] = [
     inputSummary:
       "Voorbeeld uit Touw et al. (1993): kind van 12 kg, niet-drinker, Vd 0,6 L/kg, streef 1000 mg/L. Op het moment van doseren is de ethanolconcentratie circa 600 mg/L.",
     formulas: [
-      "Oplaaddosis = Vd x gewicht x (Cdoel - Cethanol) = 0,6 x 12 x (1000 - 600) = 2880 mg",
-      "Onderhoud = 1000 x Vmax x gewicht / (Km + Cdoel) = 1000 x 75 x 12 / (138 + 1000) = 790,86 mg/uur",
+      "D = Vd x gewicht x (Cdoel - Cethanol) = 0,6 x 12 x (1000 - 600) = 2880 mg",
+      "D' = Cdoel x Vmax x gewicht / (Km + Cdoel) = 1000 x 75 x 12 / (138 + 1000) = 790,86 mg/uur",
     ],
     note: "Het artikel toont een oplaaddosis van 2880 mg en rondt de onderhoudsdosering af naar 800 mg/uur. EthaDose toont de onafgeronde waarde.",
     includeDialysis: false,
@@ -78,9 +78,9 @@ const CASES: ValidationCase[] = [
     inputSummary:
       "Gewicht 65 kg, gemeten ethanol 800 mg/L, niet-drinker (Vmax 75 mg/kg/uur), Vd 0,6 L/kg, streef 1000 mg/L.",
     formulas: [
-      "Oplaaddosis = Vd x gewicht x (Cdoel - Cethanol) = 0,6 x 65 x (1000 - 800) = 7800 mg",
-      "Onderhoud = 1000 x Vmax x gewicht / (Km + Cdoel) = 1000 x 75 x 65 / (138 + 1000) = 4283,83 mg/uur",
-      "Onderhoud bij dialyse = 1000 x (Vmax + 150) x gewicht / (Km + Cdoel) = 1000 x (75 + 150) x 65 / (138 + 1000) = 12851,49 mg/uur",
+      "D = Vd x gewicht x (Cdoel - Cethanol) = 0,6 x 65 x (1000 - 800) = 7800 mg",
+      "D' = Cdoel x Vmax x gewicht / (Km + Cdoel) = 1000 x 75 x 65 / (138 + 1000) = 4283,83 mg/uur",
+      "D' bij dialyse = Cdoel x (Vmax + 150) x gewicht / (Km + Cdoel) = 1000 x (75 + 150) x 65 / (138 + 1000) = 12851,49 mg/uur",
     ],
     includeDialysis: true,
     input: {
@@ -101,9 +101,9 @@ const CASES: ValidationCase[] = [
     inputSummary:
       "Gewicht 82 kg, gemeten ethanol 800 mg/L, chronische drinker (Vmax 175 mg/kg/uur), Vd 0,6 L/kg, streef 1000 mg/L.",
     formulas: [
-      "Oplaaddosis = Vd x gewicht x (Cdoel - Cethanol) = 0,6 x 82 x (1000 - 800) = 9840 mg",
-      "Onderhoud = 1000 x Vmax x gewicht / (Km + Cdoel) = 1000 x 175 x 82 / (138 + 1000) = 12609,84 mg/uur",
-      "Onderhoud bij dialyse = 1000 x (Vmax + 150) x gewicht / (Km + Cdoel) = 1000 x (175 + 150) x 82 / (138 + 1000) = 23418,28 mg/uur",
+      "D = Vd x gewicht x (Cdoel - Cethanol) = 0,6 x 82 x (1000 - 800) = 9840 mg",
+      "D' = Cdoel x Vmax x gewicht / (Km + Cdoel) = 1000 x 175 x 82 / (138 + 1000) = 12609,84 mg/uur",
+      "D' bij dialyse = Cdoel x (Vmax + 150) x gewicht / (Km + Cdoel) = 1000 x (175 + 150) x 82 / (138 + 1000) = 23418,28 mg/uur",
     ],
     includeDialysis: true,
     input: {
