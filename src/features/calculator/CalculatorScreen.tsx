@@ -25,6 +25,7 @@ import {
   VOLUME_DISTRIBUTION_PROFILES,
   calculateEthanolDosing,
   calculateEthanolInfusion,
+  type CalculatorResult,
   type CalculatorSettings,
   type DrinkerStatus,
   type EthanolInfusionResult,
@@ -52,6 +53,12 @@ const DEFAULT_CUSTOM_STRENGTH_PCT = "96";
 export function CalculatorScreen() {
   const [weightKg, setWeightKg] = React.useState("70");
   const [currentEthanolMgPerL, setCurrentEthanolMgPerL] = React.useState("800");
+  const [sampleToAdministrationHours, setSampleToAdministrationHours] =
+    React.useState("");
+  const [
+    sampleToAdministrationRemainingMinutes,
+    setSampleToAdministrationRemainingMinutes,
+  ] = React.useState("");
   const [drinkerStatus, setDrinkerStatus] =
     React.useState<DrinkerStatus>("nonDrinker");
   const [dialysis, setDialysis] = React.useState(false);
@@ -72,6 +79,19 @@ export function CalculatorScreen() {
 
   const parsedWeight = parseDecimalInput(weightKg);
   const parsedEthanol = parseDecimalInput(currentEthanolMgPerL);
+  const parsedSampleHours = parseDecimalInput(sampleToAdministrationHours) ?? 0;
+  const parsedSampleMinutes =
+    parseDecimalInput(sampleToAdministrationRemainingMinutes) ?? 0;
+  const sampleHoursAreValid =
+    Number.isInteger(parsedSampleHours) && parsedSampleHours >= 0;
+  const sampleMinutesAreValid =
+    Number.isInteger(parsedSampleMinutes) &&
+    parsedSampleMinutes >= 0 &&
+    parsedSampleMinutes <= 59;
+  const sampleToAdministrationMinutes =
+    sampleHoursAreValid && sampleMinutesAreValid
+      ? parsedSampleHours * 60 + parsedSampleMinutes
+      : null;
   const parsedCustomTarget = parseDecimalInput(customTargetEthanolMgPerL);
   const parsedCustomStrengthPct = parseDecimalInput(customStrengthPct);
   const parsedTargetInfusionPct = parseDecimalInput(targetInfusionPct);
@@ -126,10 +146,13 @@ export function CalculatorScreen() {
     parsedWeight > 0 &&
     parsedEthanol !== null &&
     parsedEthanol >= 0 &&
+    sampleToAdministrationMinutes !== null &&
     settingsAreValid;
   const hasInput = Boolean(
     weightKg.trim() ||
       currentEthanolMgPerL.trim() ||
+      sampleToAdministrationHours.trim() ||
+      sampleToAdministrationRemainingMinutes.trim() ||
       drinkerStatus !== "nonDrinker" ||
       dialysis ||
       targetMode !== "1000" ||
@@ -139,10 +162,14 @@ export function CalculatorScreen() {
       bagVolumeMl !== DEFAULT_BAG_VOLUME_ML,
   );
   const result =
-    canCalculate && parsedWeight !== null && parsedEthanol !== null
+    canCalculate &&
+    parsedWeight !== null &&
+    parsedEthanol !== null &&
+    sampleToAdministrationMinutes !== null
       ? calculateEthanolDosing({
           weightKg: parsedWeight,
           currentEthanolMgPerL: parsedEthanol,
+          sampleToAdministrationMinutes,
           drinkerStatus,
           dialysis,
           settings,
@@ -153,6 +180,8 @@ export function CalculatorScreen() {
   const resetInputs = () => {
     setWeightKg("");
     setCurrentEthanolMgPerL("");
+    setSampleToAdministrationHours("");
+    setSampleToAdministrationRemainingMinutes("");
     setDrinkerStatus("nonDrinker");
     setDialysis(false);
     setTargetMode("1000");
@@ -217,6 +246,16 @@ export function CalculatorScreen() {
                 unit="mg/L"
                 value={currentEthanolMgPerL}
                 onChange={setCurrentEthanolMgPerL}
+              />
+
+              <SampleTimingFields
+                hours={sampleToAdministrationHours}
+                minutes={sampleToAdministrationRemainingMinutes}
+                hoursAreValid={sampleHoursAreValid}
+                minutesAreValid={sampleMinutesAreValid}
+                result={result}
+                onHoursChange={setSampleToAdministrationHours}
+                onMinutesChange={setSampleToAdministrationRemainingMinutes}
               />
 
               <div className="flex flex-col gap-2">
@@ -285,32 +324,21 @@ export function CalculatorScreen() {
                 </h2>
 
                 {result ? (
-                  aboveTarget ? (
-                    <>
-                      <ResultRow
-                        title="Oplaaddosis"
-                        primary="Geen oplaaddosis nodig"
-                        secondary={`Gemeten ethanol is op of boven ${formatOneDecimal(settings.targetEthanolMgPerL)} mg/L.`}
-                      />
-                      <ResultRow
-                        title={
-                          dialysis
-                            ? "Onderhoud tijdens dialyse"
-                            : "Onderhoudsdosering"
-                        }
-                        primary="Geen onderhoudsdosering nodig"
-                        secondary={`Gemeten ethanol is op of boven ${formatOneDecimal(settings.targetEthanolMgPerL)} mg/L.`}
-                        divider={false}
-                      />
-                      <AssumptionSummary settings={result.settings} />
-                    </>
-                  ) : (
+                  (
                     <>
                       <div className="grid gap-3 min-[480px]:grid-cols-2">
                         <ResultRow
                           title="Oplaaddosis"
-                          primary={formatMg(result.loadingDose.mg)}
-                          secondary={formatMl(result.loadingDose.ml)}
+                          primary={
+                            aboveTarget
+                              ? "Geen oplaaddosis nodig"
+                              : formatMg(result.loadingDose.mg)
+                          }
+                          secondary={
+                            aboveTarget
+                              ? `De geschatte concentratie bij start ligt op of boven ${formatOneDecimal(settings.targetEthanolMgPerL)} mg/L.`
+                              : formatMl(result.loadingDose.ml)
+                          }
                           emphasized
                         />
                         <ResultRow
@@ -354,16 +382,23 @@ export function CalculatorScreen() {
               onTargetInfusionPctChange={setTargetInfusionPct}
               onBagVolumeChange={setBagVolumeMl}
             />
+
+            <FormulaPanel
+              drinkerStatus={drinkerStatus}
+              dialysis={dialysis}
+              weightKg={parsedWeight}
+              currentEthanolMgPerL={parsedEthanol}
+              estimatedEthanolAtAdministrationMgPerL={
+                result?.estimatedEthanolAtAdministrationMgPerL ?? null
+              }
+              estimatedEliminationMgPerLHour={
+                result?.estimatedEliminationMgPerLHour ?? null
+              }
+              sampleToAdministrationMinutes={sampleToAdministrationMinutes}
+              settings={settings}
+            />
           </div>
         </div>
-
-        <FormulaPanel
-          drinkerStatus={drinkerStatus}
-          dialysis={dialysis}
-          weightKg={parsedWeight}
-          currentEthanolMgPerL={parsedEthanol}
-          settings={settings}
-        />
 
         <Footer />
       </div>
@@ -382,7 +417,7 @@ function NumberField({
 }: {
   id: string;
   label: string;
-  unit: string;
+  unit?: string;
   value: string;
   onChange: (value: string) => void;
   error?: string;
@@ -392,7 +427,9 @@ function NumberField({
     <div className="flex flex-col gap-2">
       <div className="flex justify-between gap-3">
         <Label htmlFor={id}>{label}</Label>
-        <span className="text-body-sm text-muted-foreground">{unit}</span>
+        {unit ? (
+          <span className="text-body-sm text-muted-foreground">{unit}</span>
+        ) : null}
       </div>
       <Input
         id={id}
@@ -400,7 +437,7 @@ function NumberField({
         onChange={(event) => onChange(sanitizeDecimalInput(event.target.value))}
         inputMode="decimal"
         placeholder="0"
-        aria-label={`${label} in ${unit}`}
+        aria-label={unit ? `${label} in ${unit}` : label}
         aria-invalid={Boolean(error)}
         className={
           error
@@ -412,6 +449,68 @@ function NumberField({
         <p className="text-caption text-destructive">{error}</p>
       ) : helper ? (
         <p className="text-caption text-muted-foreground">{helper}</p>
+      ) : null}
+    </div>
+  );
+}
+
+function SampleTimingFields({
+  hours,
+  minutes,
+  hoursAreValid,
+  minutesAreValid,
+  result,
+  onHoursChange,
+  onMinutesChange,
+}: {
+  hours: string;
+  minutes: string;
+  hoursAreValid: boolean;
+  minutesAreValid: boolean;
+  result: CalculatorResult | null;
+  onHoursChange: (value: string) => void;
+  onMinutesChange: (value: string) => void;
+}) {
+  const hasDelay = result !== null && result.sampleToAdministrationMinutes > 0;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-body-sm font-semibold text-foreground">
+        Tijd tussen bloedafname en start toediening
+      </span>
+      <div className="grid grid-cols-2 gap-3">
+        <NumberField
+          id="sample-delay-hours"
+          label="Uren"
+          value={hours}
+          onChange={onHoursChange}
+          error={
+            hoursAreValid
+              ? undefined
+              : "Vul een heel getal van 0 of hoger in."
+          }
+        />
+        <NumberField
+          id="sample-delay-minutes"
+          label="Minuten"
+          value={minutes}
+          onChange={onMinutesChange}
+          error={
+            minutesAreValid
+              ? undefined
+              : "Vul een heel getal tussen 0 en 59 in."
+          }
+        />
+      </div>
+      <p className="text-caption text-muted-foreground">
+        Vul de tijd in tussen het afnemen van het bloedmonster en het starten van
+        de ethanoltoediening.
+      </p>
+      {hasDelay ? (
+        <InlineNotice
+          icon={Info}
+          text={`Geschatte ethanolconcentratie bij start toediening: ${formatNumber(result.estimatedEthanolAtAdministrationMgPerL)} mg/L. Berekening: ${formatNumber(result.measuredEthanolMgPerL)} - (${formatOneDecimal(result.estimatedEliminationMgPerLHour)} mg/L/uur x ${formatOneDecimal(result.sampleToAdministrationMinutes / 60)} uur). Afname per uur = onderhoudsdosis / (Vd x gewicht).`}
+        />
       ) : null}
     </div>
   );
@@ -476,7 +575,7 @@ function DoseSettings({
 
       <InlineNotice
         icon={Info}
-        text="1000 mg/L is de in de standaard nagestreefde ethanolconcentratie. Lokale protocollen kunnen verschillen."
+        text="Standaard wordt 1000 mg/L nagestreefd, maar lokale protocollen kunnen verschillen."
       />
 
       <div className="flex flex-col gap-2">
@@ -597,17 +696,26 @@ function InfusionPreparationCard({
         />
 
         {preparation && preparation.feasible ? (
-          <ResultRow
-            title={`Bijspuiten ethanol ${strengthPctLabel}`}
-            primary={formatMlOneDecimal(preparation.ethanolToAddMl)}
-            secondary={`Eindvolume ${formatMlOneDecimal(preparation.finalVolumeMl)} (${formatNumber(Number(bagVolumeMl) || 0)} ml zak + ${formatMlOneDecimal(preparation.ethanolToAddMl)} ethanol).`}
-            emphasized
-          />
+          <div className="flex flex-col gap-3">
+            {preparation.capacityLimited ? (
+              <InlineNotice
+                icon={Info}
+                tone="warning"
+                text={`Voor exact ${formatMgPerMl(preparation.targetConcentrationMgPerMl)} is ${formatMlOneDecimal(preparation.requiredEthanolToAddMl)} nodig. De zak laat maximaal ${formatMlOneDecimal(preparation.maximumAddVolumeMl)} toe. EthaDose rekent verder met de werkelijke concentratie van ${formatMgPerMl(preparation.actualConcentrationMgPerMl)}.`}
+              />
+            ) : null}
+            <ResultRow
+              title={`Bijspuiten ethanol ${strengthPctLabel}`}
+              primary={formatMlOneDecimal(preparation.ethanolToAddMl)}
+              secondary={`Eindvolume ${formatMlOneDecimal(preparation.finalVolumeMl)}, werkelijke concentratie ${formatMgPerMl(preparation.actualConcentrationMgPerMl)}. Maximaal bijspuitvolume ${formatMlOneDecimal(preparation.maximumAddVolumeMl)}.`}
+              emphasized
+            />
+          </div>
         ) : preparation && !preparation.feasible ? (
           <InlineNotice
             icon={Info}
             tone="warning"
-            text={`De eindconcentratie (${formatMgPerMl(preparation.infusionConcentrationGPerL)}) is hoger dan de stocksterkte (${formatMgPerMl(preparation.stockConcentrationMgPerMl)}). Kies een lagere eindconcentratie of een sterkere ethanol.`}
+            text={`De gewenste eindconcentratie (${formatMgPerMl(preparation.targetConcentrationMgPerMl)}) is gelijk aan of hoger dan de stocksterkte (${formatMgPerMl(preparation.stockConcentrationMgPerMl)}). Kies een lagere eindconcentratie of een sterkere ethanol.`}
           />
         ) : (
           <InlineNotice
@@ -746,7 +854,7 @@ function PumpTiming({
         Pomp instellen (onderhoud)
       </span>
       <span className="text-body-md text-foreground">
-        Zak leeg na {formatHours(hoursToEmpty)} bij{" "}
+        Infuuszak leeg na {formatHours(hoursToEmpty)} bij{" "}
         {formatMlPerHour(maintenanceMlPerHour)}.
       </span>
       <span className="text-body-sm text-muted-foreground">
@@ -802,6 +910,9 @@ function FormulaPanel({
   dialysis,
   weightKg,
   currentEthanolMgPerL,
+  estimatedEthanolAtAdministrationMgPerL,
+  estimatedEliminationMgPerLHour,
+  sampleToAdministrationMinutes,
   settings,
 }: {
   className?: string;
@@ -809,6 +920,9 @@ function FormulaPanel({
   dialysis: boolean;
   weightKg: number | null;
   currentEthanolMgPerL: number | null;
+  estimatedEthanolAtAdministrationMgPerL: number | null;
+  estimatedEliminationMgPerLHour: number | null;
+  sampleToAdministrationMinutes: number | null;
   settings: CalculatorSettings;
 }) {
   const profile = DRINKER_PROFILES[drinkerStatus];
@@ -820,8 +934,10 @@ function FormulaPanel({
   const vd = settings.volumeOfDistributionLPerKg;
   // Show the filled-in numbers only when both patient inputs are valid.
   const hasInputs = weightKg !== null && currentEthanolMgPerL !== null;
-  const loadingSubstitution = hasInputs
-    ? `= ${formatOneDecimal(vd)} x ${formatNumber(weightKg)} x max(0, ${formatNumber(target)} - ${formatNumber(currentEthanolMgPerL)})`
+  const concentrationForLoading =
+    estimatedEthanolAtAdministrationMgPerL ?? currentEthanolMgPerL;
+  const loadingSubstitution = hasInputs && concentrationForLoading !== null
+    ? `= ${formatOneDecimal(vd)} x ${formatNumber(weightKg)} x max(0, ${formatNumber(target)} - ${formatNumber(concentrationForLoading)})`
     : undefined;
   const maintenanceSubstitution = hasInputs
     ? `= ${formatNumber(target)} x ${formatNumber(vmax)} x ${formatNumber(weightKg)} / (${formatNumber(km)} + ${formatNumber(target)})`
@@ -840,7 +956,7 @@ function FormulaPanel({
           </h2>
         </div>
 
-        <div className="grid gap-3 min-[720px]:grid-cols-2">
+        <div className="grid gap-3">
           <FormulaLine
             label="Oplaaddosis"
             formula="D = Vd x gewicht x max(0, Cdoel - Cethanol)"
@@ -853,11 +969,24 @@ function FormulaPanel({
           />
         </div>
 
-        {currentEthanolMgPerL !== null &&
-        currentEthanolMgPerL >= settings.targetEthanolMgPerL ? (
+        {sampleToAdministrationMinutes !== null &&
+        sampleToAdministrationMinutes > 0 &&
+        estimatedEliminationMgPerLHour !== null &&
+        currentEthanolMgPerL !== null &&
+        estimatedEthanolAtAdministrationMgPerL !== null ? (
+          <FormulaLine
+            label="Schatting bij start toediening"
+            formula="Cstart = max(0, Cgemeten - afname per uur x tijd (h))"
+            substitution={`= max(0, ${formatNumber(currentEthanolMgPerL)} - ${formatOneDecimal(estimatedEliminationMgPerLHour)} x ${formatOneDecimal(sampleToAdministrationMinutes / 60)}) = ${formatNumber(estimatedEthanolAtAdministrationMgPerL)} mg/L`}
+          />
+        ) : null}
+
+        {concentrationForLoading !== null &&
+        concentrationForLoading >= settings.targetEthanolMgPerL ? (
           <p className="text-body-sm text-muted-foreground">
-            Boven de streefconcentratie is doseren niet nodig. EthaDose toont dan
-            geen oplaad- en geen onderhoudsdosering.
+            De geschatte concentratie bij start ligt op of boven de
+            streefconcentratie. Daarom is geen oplaaddosis nodig. De berekende
+            onderhoudsdosis blijft zichtbaar.
           </p>
         ) : null}
       </CardContent>

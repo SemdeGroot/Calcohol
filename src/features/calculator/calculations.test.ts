@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   CalculatorInputError,
+  calculateEstimatedEliminationMgPerLHour,
   calculateEthanolDosing,
   calculateEthanolInfusion,
   calculateLoadingDoseMg,
   calculateMaintenanceDoseMgPerHour,
+  convertEthanolVolumePercentToMgPerMl,
   convertMgToInfusionMl,
+  estimateEthanolAtAdministrationMgPerL,
   parseDrinkerStatus,
 } from "./calculations";
 
@@ -70,9 +73,34 @@ describe("ethanol dosing calculations", () => {
     // stock = 0.96 * 789 = 757.44 mg/ml; Vadd = 100 * 500 / (757.44 - 100)
     expect(result.stockConcentrationMgPerMl).toBeCloseTo(757.44, 10);
     expect(result.ethanolToAddMl).toBeCloseTo(76.05256753467998, 10);
+    expect(result.requiredEthanolToAddMl).toBeCloseTo(76.05256753467998, 10);
     expect(result.finalVolumeMl).toBeCloseTo(576.05256753468, 10);
-    expect(result.infusionConcentrationGPerL).toBe(100);
+    expect(result.actualConcentrationMgPerMl).toBeCloseTo(100, 10);
+    expect(result.infusionConcentrationGPerL).toBeCloseTo(100, 10);
+    expect(result.maximumAddVolumeMl).toBe(150);
+    expect(result.capacityLimited).toBe(false);
     expect(result.feasible).toBe(true);
+  });
+
+  it("converts any ethanol volume percentage to a mass concentration", () => {
+    expect(convertEthanolVolumePercentToMgPerMl(96)).toBeCloseTo(757.44, 10);
+    expect(convertEthanolVolumePercentToMgPerMl(98)).toBeCloseTo(773.22, 10);
+    expect(convertEthanolVolumePercentToMgPerMl(50)).toBeCloseTo(394.5, 10);
+    expect(convertEthanolVolumePercentToMgPerMl(96) * 50).toBeCloseTo(37872, 10);
+  });
+
+  it("limits preparation to the maximum add volume and returns the actual concentration", () => {
+    const result = calculateEthanolInfusion({
+      ethanolStrengthFraction: 0.96,
+      targetConcentrationMgPerMl: 100,
+      bagVolumeMl: 1000,
+    });
+
+    expect(result.requiredEthanolToAddMl).toBeCloseTo(152.10513506935996, 10);
+    expect(result.ethanolToAddMl).toBe(150);
+    expect(result.finalVolumeMl).toBe(1150);
+    expect(result.actualConcentrationMgPerMl).toBeCloseTo(98.79652173913044, 10);
+    expect(result.capacityLimited).toBe(true);
   });
 
   it("flags an infeasible preparation when the target exceeds the stock strength", () => {
@@ -85,6 +113,40 @@ describe("ethanol dosing calculations", () => {
     expect(result.feasible).toBe(false);
     expect(result.ethanolToAddMl).toBe(0);
     expect(result.finalVolumeMl).toBe(500);
+    expect(result.actualConcentrationMgPerMl).toBe(0);
+  });
+
+  it("estimates elimination and concentration at administration", () => {
+    const elimination = calculateEstimatedEliminationMgPerLHour(70, 75, 1000, 0.7);
+
+    expect(elimination).toBeCloseTo(94.15013808686919, 10);
+    expect(estimateEthanolAtAdministrationMgPerL(800, elimination, 90)).toBeCloseTo(
+      658.7747928696963,
+      10,
+    );
+  });
+
+  it("uses the estimated concentration at administration for the loading dose", () => {
+    const result = calculateEthanolDosing({
+      weightKg: 70,
+      currentEthanolMgPerL: 800,
+      sampleToAdministrationMinutes: 90,
+      drinkerStatus: "nonDrinker",
+      dialysis: false,
+      settings: { volumeOfDistributionLPerKg: 0.7 },
+    });
+
+    expect(result.measuredEthanolMgPerL).toBe(800);
+    expect(result.estimatedEliminationMgPerLHour).toBeCloseTo(94.15013808686919, 10);
+    expect(result.estimatedEthanolAtAdministrationMgPerL).toBeCloseTo(
+      658.7747928696963,
+      10,
+    );
+    expect(result.loadingDose.mg).toBeCloseTo(16720.035149384883, 10);
+  });
+
+  it("clamps the estimated concentration at administration to zero", () => {
+    expect(estimateEthanolAtAdministrationMgPerL(100, 200, 60)).toBe(0);
   });
 
   it("clamps loading dose to zero at or above target concentration", () => {

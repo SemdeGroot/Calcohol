@@ -10,6 +10,7 @@ export type CalculatorSettings = {
 export type CalculatorInput = {
   weightKg?: number | null;
   currentEthanolMgPerL?: number | null;
+  sampleToAdministrationMinutes?: number | null;
   drinkerStatus: DrinkerStatus;
   dialysis: boolean;
   settings?: Partial<CalculatorSettings>;
@@ -30,6 +31,10 @@ export type CalculatorResult = {
   maintenanceDose: MaintenanceDoseResult;
   dialysisMaintenanceDose: MaintenanceDoseResult;
   selectedMaintenanceDose: MaintenanceDoseResult;
+  measuredEthanolMgPerL: number;
+  estimatedEthanolAtAdministrationMgPerL: number;
+  estimatedEliminationMgPerLHour: number;
+  sampleToAdministrationMinutes: number;
   profile: DrinkerProfile;
   settings: CalculatorSettings;
   constants: typeof CALCULATOR_CONSTANTS;
@@ -66,6 +71,12 @@ export const TARGET_ETHANOL_OPTIONS_MG_PER_L = [1000, 1500] as const;
 export const ETHANOL_STRENGTH_OPTIONS = [0.96, 0.98] as const;
 
 export const BAG_VOLUME_OPTIONS_ML = [250, 500, 1000] as const;
+
+export const BAG_MAXIMUM_ADD_VOLUME_ML: Record<number, number> = {
+  250: 75,
+  500: 150,
+  1000: 150,
+};
 
 export const VOLUME_DISTRIBUTION_PROFILES: Record<
   VolumeOfDistributionProfileId,
@@ -142,6 +153,55 @@ export function calculateMaintenanceDoseMgPerHour(
   );
 }
 
+export function convertEthanolVolumePercentToMgPerMl(
+  ethanolStrengthPercent: number,
+): number {
+  if (ethanolStrengthPercent <= 0 || ethanolStrengthPercent > 100) {
+    throw new CalculatorInputError("Ethanolsterkte moet tussen 0 en 100% v/v liggen.");
+  }
+
+  return (ethanolStrengthPercent / 100) * CALCULATOR_CONSTANTS.ethanolDensityMgPerMl;
+}
+
+export function calculateEstimatedEliminationMgPerLHour(
+  weightKg: number,
+  vmaxMgKgHour: number,
+  targetEthanolMgPerL = DEFAULT_CALCULATOR_SETTINGS.targetEthanolMgPerL,
+  volumeOfDistributionLPerKg = DEFAULT_CALCULATOR_SETTINGS.volumeOfDistributionLPerKg,
+): number {
+  if (weightKg <= 0 || volumeOfDistributionLPerKg <= 0) {
+    throw new CalculatorInputError("Gewicht en verdelingsvolume moeten groter zijn dan 0.");
+  }
+
+  const maintenanceMgPerHour = calculateMaintenanceDoseMgPerHour(
+    weightKg,
+    vmaxMgKgHour,
+    targetEthanolMgPerL,
+  );
+
+  return maintenanceMgPerHour / (volumeOfDistributionLPerKg * weightKg);
+}
+
+export function estimateEthanolAtAdministrationMgPerL(
+  measuredEthanolMgPerL: number,
+  estimatedEliminationMgPerLHour: number,
+  sampleToAdministrationMinutes: number,
+): number {
+  if (
+    measuredEthanolMgPerL < 0 ||
+    estimatedEliminationMgPerLHour < 0 ||
+    sampleToAdministrationMinutes < 0
+  ) {
+    throw new CalculatorInputError("Concentraties en tijd kunnen niet negatief zijn.");
+  }
+
+  return Math.max(
+    0,
+    measuredEthanolMgPerL -
+      estimatedEliminationMgPerLHour * (sampleToAdministrationMinutes / 60),
+  );
+}
+
 export function convertMgToInfusionMl(
   doseMg: number,
   infusionConcentrationGPerL = DEFAULT_CALCULATOR_SETTINGS.infusionConcentrationGPerL,
@@ -153,13 +213,19 @@ export type EthanolInfusionInput = {
   ethanolStrengthFraction: number;
   targetConcentrationMgPerMl: number;
   bagVolumeMl: number;
+  maximumAddVolumeMl?: number;
 };
 
 export type EthanolInfusionResult = {
   ethanolToAddMl: number;
+  requiredEthanolToAddMl: number;
   finalVolumeMl: number;
   infusionConcentrationGPerL: number;
+  targetConcentrationMgPerMl: number;
+  actualConcentrationMgPerMl: number;
   stockConcentrationMgPerMl: number;
+  maximumAddVolumeMl: number;
+  capacityLimited: boolean;
   feasible: boolean;
 };
 
@@ -172,30 +238,45 @@ export function calculateEthanolInfusion({
   ethanolStrengthFraction,
   targetConcentrationMgPerMl,
   bagVolumeMl,
+  maximumAddVolumeMl = BAG_MAXIMUM_ADD_VOLUME_ML[bagVolumeMl] ?? Number.POSITIVE_INFINITY,
 }: EthanolInfusionInput): EthanolInfusionResult {
   if (
     ethanolStrengthFraction <= 0 ||
     ethanolStrengthFraction > 1 ||
     targetConcentrationMgPerMl <= 0 ||
-    bagVolumeMl <= 0
+    bagVolumeMl <= 0 ||
+    maximumAddVolumeMl <= 0
   ) {
     throw new CalculatorInputError("Bereidingswaarden moeten groter zijn dan 0.");
   }
 
-  const stockConcentrationMgPerMl =
-    ethanolStrengthFraction * CALCULATOR_CONSTANTS.ethanolDensityMgPerMl;
+  const stockConcentrationMgPerMl = convertEthanolVolumePercentToMgPerMl(
+    ethanolStrengthFraction * 100,
+  );
   const feasible = stockConcentrationMgPerMl > targetConcentrationMgPerMl;
 
-  const ethanolToAddMl = feasible
+  const requiredEthanolToAddMl = feasible
     ? (targetConcentrationMgPerMl * bagVolumeMl) /
       (stockConcentrationMgPerMl - targetConcentrationMgPerMl)
+    : 0;
+  const capacityLimited =
+    feasible && requiredEthanolToAddMl > maximumAddVolumeMl;
+  const ethanolToAddMl = capacityLimited ? maximumAddVolumeMl : requiredEthanolToAddMl;
+  const finalVolumeMl = bagVolumeMl + ethanolToAddMl;
+  const actualConcentrationMgPerMl = feasible
+    ? (stockConcentrationMgPerMl * ethanolToAddMl) / finalVolumeMl
     : 0;
 
   return {
     ethanolToAddMl,
-    finalVolumeMl: bagVolumeMl + ethanolToAddMl,
-    infusionConcentrationGPerL: targetConcentrationMgPerMl,
+    requiredEthanolToAddMl,
+    finalVolumeMl,
+    infusionConcentrationGPerL: actualConcentrationMgPerMl,
+    targetConcentrationMgPerMl,
+    actualConcentrationMgPerMl,
     stockConcentrationMgPerMl,
+    maximumAddVolumeMl,
+    capacityLimited,
     feasible,
   };
 }
@@ -207,14 +288,26 @@ export function calculateEthanolDosing(input: CalculatorInput): CalculatorResult
   const profile = DRINKER_PROFILES[input.drinkerStatus];
   const weightKg = input.weightKg;
   const currentEthanolMgPerL = input.currentEthanolMgPerL;
+  const sampleToAdministrationMinutes = input.sampleToAdministrationMinutes ?? 0;
 
   if (typeof weightKg !== "number" || typeof currentEthanolMgPerL !== "number") {
     throw new CalculatorInputError("Gewicht en ethanolconcentratie zijn verplicht.");
   }
 
+  const estimatedEliminationMgPerLHour = calculateEstimatedEliminationMgPerLHour(
+    weightKg,
+    profile.vmaxMgKgHour,
+    settings.targetEthanolMgPerL,
+    settings.volumeOfDistributionLPerKg,
+  );
+  const estimatedEthanolAtAdministrationMgPerL = estimateEthanolAtAdministrationMgPerL(
+    currentEthanolMgPerL,
+    estimatedEliminationMgPerLHour,
+    sampleToAdministrationMinutes,
+  );
   const loadingMg = calculateLoadingDoseMg(
     weightKg,
-    currentEthanolMgPerL,
+    estimatedEthanolAtAdministrationMgPerL,
     settings.targetEthanolMgPerL,
     settings.volumeOfDistributionLPerKg,
   );
@@ -243,6 +336,10 @@ export function calculateEthanolDosing(input: CalculatorInput): CalculatorResult
     maintenanceDose,
     dialysisMaintenanceDose,
     selectedMaintenanceDose: input.dialysis ? dialysisMaintenanceDose : maintenanceDose,
+    measuredEthanolMgPerL: currentEthanolMgPerL,
+    estimatedEthanolAtAdministrationMgPerL,
+    estimatedEliminationMgPerLHour,
+    sampleToAdministrationMinutes,
     profile,
     settings,
     constants: CALCULATOR_CONSTANTS,
@@ -275,6 +372,14 @@ function validateCalculatorInput(input: CalculatorInput, settings: CalculatorSet
 
   if (input.currentEthanolMgPerL < 0) {
     throw new CalculatorInputError("Ethanolconcentratie kan niet negatief zijn.");
+  }
+
+  if (
+    input.sampleToAdministrationMinutes !== undefined &&
+    input.sampleToAdministrationMinutes !== null &&
+    input.sampleToAdministrationMinutes < 0
+  ) {
+    throw new CalculatorInputError("Tijd tussen bloedafname en toediening kan niet negatief zijn.");
   }
 
   if (settings.targetEthanolMgPerL <= 0) {

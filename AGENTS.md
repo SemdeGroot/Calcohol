@@ -65,3 +65,9 @@ npm run build
 ```
 
 `npm run build` produces the static export in `out/`.
+
+## Process Cleanup
+
+- Before finishing a task, stop every development server, test watcher, browser process, or other long-running process started for that task.
+- Confirm that no project-specific watcher or server remains active before sending the final response.
+- Prefer one-shot verification commands such as `npm test` over watch mode unless continuous watching is required during the task.

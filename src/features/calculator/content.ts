@@ -35,15 +35,16 @@ export const SOURCE_SECTIONS: SourceSection[] = [
   {
     title: "Rekenmethode",
     paragraphs: [
-      "De streefconcentratie is 1000 mg/L. De oplaaddosis vult alleen het verschil aan tussen de gemeten en de gekozen streefwaarde. Ligt de gemeten waarde daar al op of boven, dan toont EthaDose geen oplaaddosis.",
+      "De standaard streefconcentratie is 1000 mg/L. EthaDose schat met de tijd tussen bloedafname en start van de toediening welke ethanolconcentratie bij de start resteert. De oplaaddosis vult alleen het verschil tussen deze schatting en de gekozen streefwaarde aan.",
       "De onderhoudsdosering gebruikt gewicht, Vmax en Km. Bij chronisch alcoholgebruik geldt een hogere Vmax. Bij dialyse telt extra klaring mee. De infuusconcentratie bepaalt de omrekening van mg ethanol naar ml.",
+      "De sterkte van de ethanolvoorraad wordt ingevoerd als volumepercentage. EthaDose rekent dit met de dichtheid van zuivere ethanol om naar mg/ml. Als het benodigde bijspuitvolume niet in de gekozen zak past, gebruikt de app het maximale bijspuitvolume en rekent verder met de werkelijk verkregen concentratie.",
     ],
   },
   {
     title: "Aandachtspunten",
     paragraphs: [
       "Controleer de ethanolspiegel 4 tot 6 uur na de oplaaddosis.",
-      "Houd rekening met ethanolafbraak tussen bloedafname en uitslag: de actuele concentratie kan lager zijn dan de gemeten waarde.",
+      "De schatting bij start van de toediening gebruikt farmacokinetische aannames en vervangt geen nieuwe ethanolbepaling.",
     ],
   },
 ];
@@ -58,7 +59,17 @@ export const FAQ: { question: string; answer: string }[] = [
   {
     question: "Hoe berekent EthaDose de oplaaddosis ethanol?",
     answer:
-      "De oplaaddosis is het verdelingsvolume maal het gewicht maal het verschil tussen de streefconcentratie en de gemeten ethanolconcentratie: D = Vd x gewicht x max(0, Cdoel - Cethanol). Ligt de gemeten ethanolwaarde al op of boven de streefwaarde, dan is geen oplaaddosis nodig.",
+      "EthaDose schat eerst de ethanolconcentratie bij start van de toediening aan de hand van de gemeten concentratie en de verstreken tijd sinds de bloedafname. De oplaaddosis is daarna het verdelingsvolume maal het gewicht maal het verschil met de streefconcentratie. Ligt de geschatte waarde al op of boven de streefwaarde, dan is geen oplaaddosis nodig.",
+  },
+  {
+    question: "Hoe houdt EthaDose rekening met de tijd tussen bloedafname en toediening?",
+    answer:
+      "EthaDose berekent een geschatte afname in mg/L per uur met de onderhoudsformule en het verdelingsvolume. De app trekt de geschatte afname tijdens het tijdsinterval af van de gemeten concentratie. Deze uitkomst is een schatting en vervangt geen nieuwe ethanolbepaling.",
+  },
+  {
+    question: "Hoe berekent EthaDose de concentratie van het ethanol-infuus?",
+    answer:
+      "EthaDose rekent de sterkte in procent v/v met een dichtheid van 789 mg/ml om naar een massaconcentratie. De app houdt rekening met het toegevoegde volume en met het maximale bijspuitvolume van de gekozen infuuszak. Alle ml-uitkomsten gebruiken de werkelijk verkregen infuusconcentratie.",
   },
   {
     question: "Waarom is de streefconcentratie 1000 mg/L?",

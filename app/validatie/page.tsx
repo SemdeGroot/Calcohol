@@ -66,16 +66,18 @@ export default function ValidatiePage() {
           <p>Oplaaddosis = Vd x gewicht x max(0, Cdoel - Cethanol)</p>
           <p>Onderhoud = 1000 x Vmax x gewicht / (Km + Cdoel)</p>
           <p>Onderhoud bij dialyse = 1000 x (Vmax + 150) x gewicht / (Km + Cdoel)</p>
+          <p>Geschatte afname = onderhoud zonder dialyse / (Vd x gewicht)</p>
+          <p>Cstart = max(0, Cgemeten - geschatte afname x tijd)</p>
           <p>Omrekening naar ml = dosis ethanol (mg) / infuusconcentratie (g/L)</p>
         </div>
         <p>
           Daarbij is Km 138 mg/L en de streefconcentratie 1000 mg/L. Vmax is
           75 mg/kg/uur voor een niet-drinker en 175 mg/kg/uur voor een chronische
           drinker. Vd is 0,7 L/kg voor een man en 0,6 L/kg voor een vrouw. De
-          ml-uitkomsten zijn afhankelijk van de gekozen bereiding. In de
-          calculator staat standaard 50 ml ethanol 96% v/v, aangevuld met
-          glucose 5% tot 300 ml eindvolume. Voor de dosisomrekening is dat
-          126,7 g/L ethanol.
+          geschatte afname gebruikt de onderhoudsdosis zonder dialyse. De
+          ml-uitkomsten zijn afhankelijk van de gekozen bereiding. EthaDose
+          rekent de ethanolsterkte in procent v/v om naar mg/ml en gebruikt de
+          werkelijke concentratie na het bijspuiten.
         </p>
       </ContentSection>
 
@@ -139,7 +141,8 @@ export default function ValidatiePage() {
           Naast deze pagina draait bij elke build een geautomatiseerde testset
           die dezelfde waarden en aanvullende randgevallen controleert. Daaronder
           vallen het afkappen van de oplaaddosis op of boven de streefconcentratie
-          en het weigeren van ongeldige invoer.
+          en het weigeren van ongeldige invoer. De tests controleren ook de
+          tijdcorrectie, zakcapaciteit en omzetting van procent v/v naar mg/ml.
         </p>
       </ContentSection>
 
